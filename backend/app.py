@@ -7,6 +7,7 @@ The API only reads from SQLite (filled by importer.py) and lets the NGO change a
 report's status (new -> dispatched -> resolved).
 """
 import os
+import sys
 import re
 import subprocess
 import threading
@@ -22,6 +23,7 @@ app = Flask(__name__, static_folder=os.path.join(WEB_DIR, "static"), static_url_
 
 ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 SIM_BIN = os.environ.get("SIM_BIN", os.path.join(ROOT_DIR, "ns3", "drone_disaster_sim"))
+PY_SIM = os.path.join(ROOT_DIR, "ns3", "drone_disaster_sim.py")
 OUT_ROOT = os.environ.get("NS3_OUTPUT", os.path.join(ROOT_DIR, "ns3_output"))
 _sim_lock = threading.Lock()
 
@@ -63,6 +65,11 @@ def report_dict(r):
 @app.route("/")
 def index():
     return send_from_directory(WEB_DIR, "index.html")
+
+
+@app.route("/demo")
+def demo():
+    return send_from_directory(os.path.join(ROOT_DIR, "demo"), "drone-disaster-comm-sim.html")
 
 
 # ------------------------------------------------------------------------ API
@@ -196,13 +203,17 @@ def api_simulate():
     name = (data.get("name") or "").strip() or f"web_{time.strftime('%H%M%S')}"
     if not re.fullmatch(r"[A-Za-z0-9_-]{1,40}", name):
         abort(400, description="run name: letters, digits, _ and - only (max 40)")
-    if not os.path.isfile(SIM_BIN):
+    if os.path.isfile(SIM_BIN):
+        sim_cmd = [SIM_BIN]
+    elif os.path.isfile(PY_SIM):
+        sim_cmd = [sys.executable, PY_SIM]
+    else:
         abort(400, description="Simulator not built. In a terminal run:  cd ns3 && make   (or set SIM_BIN)")
     if not _sim_lock.acquire(blocking=False):
         return jsonify({"error": "another simulation is already running"}), 409
     try:
         out_dir = os.path.join(OUT_ROOT, name)
-        cmd = [SIM_BIN, f"--outDir={out_dir}", f"--scenario={scenario}", f"--relayMode={relay}",
+        cmd = sim_cmd + [f"--outDir={out_dir}", f"--scenario={scenario}", f"--relayMode={relay}",
                f"--droneRange={drone_range}", f"--towerRange={tower_range}", f"--loss={loss}", f"--seed={seed}",
                f"--towerDownStart={down_start}", f"--towerDownEnd={down_end}"]
         try:

@@ -3,127 +3,281 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Disaster Relief Coordination Desk</title>
+<title>Drone-Based-Disaster-Communication</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css">
 <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
 
 <header class="top">
-  <div>
-    <h1>Relief Coordination Desk</h1>
-    <p class="sub">Reports relayed by drone from disaster zones with no mobile network</p>
+  <div class="brand">
+    <div class="brand-icon">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 2v20M2 12h20M4.93 4.93l14.14 14.14M4.93 19.07L19.07 4.93"/>
+        <circle cx="12" cy="12" r="3"/>
+      </svg>
+    </div>
+    <div>
+      <h1>Drone-Based-Disaster-Communication</h1>
+      <p class="sub">Store-and-Forward Autonomous Drone Mesh System for Emergency Relief</p>
+    </div>
   </div>
-  <label class="runpick">Simulation run
-    <select id="runSelect" aria-label="Choose simulation run"></select>
-  </label>
+  
+  <div class="top-controls">
+    <button class="act ghost" id="btnToggleRunner" type="button">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="12" y1="5" x2="12" y2="19"></line>
+        <line x1="5" y1="12" x2="19" y2="12"></line>
+      </svg>
+      Configure Simulation
+    </button>
+    <label class="runpick">Simulation Run
+      <select id="runSelect" aria-label="Choose simulation run"></select>
+    </label>
+  </div>
 </header>
+
+<div class="tabs-wrap">
+  <nav class="nav-tabs" role="tablist">
+    <button class="tab-btn active" data-tab="tab-replay">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+      Live Mission Replay
+    </button>
+    <button class="tab-btn" data-tab="tab-map">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"></polygon><line x1="8" y1="2" x2="8" y2="18"></line><line x1="16" y1="6" x2="16" y2="22"></line></svg>
+      Field Map &amp; Rescue Queue
+    </button>
+    <button class="tab-btn" data-tab="tab-analytics">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
+      Performance &amp; Benchmark
+    </button>
+    <button class="tab-btn" data-tab="tab-events">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+      Mission Event Log
+    </button>
+    <button class="tab-btn" data-tab="tab-all">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+      Overview (All)
+    </button>
+  </nav>
+</div>
 
 <main id="app" hidden>
 
-  <details class="panel runner" id="runner" open>
-    <summary>Run a new simulation <span class="hint">(starts NS-3 on this computer and shows the result below)</span></summary>
+  <details class="panel runner" id="runner">
+    <summary>
+      <span>&#9881;&#65039; Simulation Parameters &amp; Experiment Runner</span>
+      <span class="hint">Click to adjust variables and run simulation</span>
+    </summary>
     <form id="runForm" class="runform" autocomplete="off">
-      <label>Disaster scenario
-        <select id="rScen"><option value="flood">Flood</option><option value="earthquake">Earthquake</option>
-          <option value="landslide">Landslide</option><option value="fire">Forest fire</option></select></label>
-      <label>Relay drone behaviour
-        <select id="rMode"><option value="adaptive">Adaptive (follows primary)</option><option value="static">Static hover point</option></select></label>
-      <label>Drone-to-drone range <b id="rRangeV"></b><input type="range" id="rRange" min="100" max="800" step="10" value="450"></label>
-      <label>Tower coverage radius <b id="rTowerV"></b><input type="range" id="rTower" min="100" max="800" step="10" value="600"></label>
-      <label>Packet loss <b id="rLossV"></b><input type="range" id="rLoss" min="0" max="60" step="5" value="10"></label>
-      <label>Tower offline from (s)<input type="number" id="rDown1" min="0" max="900" placeholder="never"></label>
-      <label>Tower back online at (s)<input type="number" id="rDown2" min="0" max="900" placeholder="never"></label>
-      <label>Random seed<input type="number" id="rSeed" min="1" max="999999" value="1"></label>
-      <label>Run name<input type="text" id="rName" maxlength="40" placeholder="auto"></label>
-      <div class="runact"><button class="act" id="rGo" type="submit">Run simulation</button><span class="hint" id="rMsg" role="status"></span></div>
+      <label>Disaster Scenario
+        <select id="rScen">
+          <option value="flood">Flood</option>
+          <option value="earthquake">Earthquake</option>
+          <option value="landslide">Landslide</option>
+          <option value="fire">Forest Fire</option>
+        </select>
+      </label>
+      <label>Relay Drone Behavior
+        <select id="rMode">
+          <option value="adaptive">Adaptive (Follows Primary)</option>
+          <option value="static">Static Hover Point</option>
+        </select>
+      </label>
+      <label>Drone-to-Drone Range <b id="rRangeV">450 m</b>
+        <input type="range" id="rRange" min="100" max="800" step="10" value="450">
+      </label>
+      <label>Tower Coverage Radius <b id="rTowerV">600 m</b>
+        <input type="range" id="rTower" min="100" max="800" step="10" value="600">
+      </label>
+      <label>Base Packet Loss <b id="rLossV">10%</b>
+        <input type="range" id="rLoss" min="0" max="60" step="5" value="10">
+      </label>
+      <label>Tower Offline From (s)
+        <input type="number" id="rDown1" min="0" max="900" placeholder="never">
+      </label>
+      <label>Tower Back Online At (s)
+        <input type="number" id="rDown2" min="0" max="900" placeholder="never">
+      </label>
+      <label>Random Seed
+        <input type="number" id="rSeed" min="1" max="999999" value="1">
+      </label>
+      <label>Run Identifier
+        <input type="text" id="rName" maxlength="40" placeholder="auto-generated">
+      </label>
+      <div class="runact">
+        <button class="act" id="rGo" type="submit">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+          Run Simulation
+        </button>
+        <span class="hint" id="rMsg" role="status"></span>
+      </div>
     </form>
   </details>
 
+  <!-- Key Metrics Strip -->
   <section class="strip" aria-label="Run summary">
-    <div class="stat"><span>Reports received</span><b id="sDelivered">0</b><small id="sRatio"></small></div>
-    <div class="stat"><span>Average delay</span><b id="sAvg">-</b><small id="sRange"></small></div>
-    <div class="stat"><span>Slowest report</span><b id="sMax">-</b><small>capture to hub</small></div>
-    <div class="stat"><span>Retransmissions</span><b id="sRetx">0</b><small>extra sends after loss</small></div>
-    <div class="stat"><span>Teams dispatched</span><b id="sDisp">0</b><small id="sResolved"></small></div>
+    <div class="stat">
+      <span>Reports Delivered</span>
+      <b id="sDelivered">0</b>
+      <small id="sRatio"></small>
+    </div>
+    <div class="stat">
+      <span>Average Latency</span>
+      <b id="sAvg">-</b>
+      <small id="sRange"></small>
+    </div>
+    <div class="stat">
+      <span>Peak Delay</span>
+      <b id="sMax">-</b>
+      <small>capture to hub</small>
+    </div>
+    <div class="stat">
+      <span>Retransmissions</span>
+      <b id="sRetx">0</b>
+      <small>extra sends after packet loss</small>
+    </div>
+    <div class="stat">
+      <span>Teams Dispatched</span>
+      <b id="sDisp">0</b>
+      <small id="sResolved"></small>
+    </div>
+  </section>
+
+  <div class="params-card">
     <div class="params" id="params"></div>
-  </section>
+  </div>
 
-  <section class="panel replay" id="replay">
-    <div class="phead"><h2>Live replay of this simulation</h2><span class="hint" id="rpNote">Drone positions, links and packets come from the NS-3 run</span></div>
-    <canvas id="rpCanvas" role="img" aria-label="Replay of the drone simulation"></canvas>
-    <div class="rpbar">
-      <button class="act" id="rpPlay" type="button">Play</button>
-      <button class="act ghost" id="rpRestart" type="button">Restart</button>
-      <label class="spd">Speed
-        <select id="rpSpeed"><option value="1">1x</option><option value="5">5x</option><option value="10" selected>10x</option><option value="25">25x</option><option value="50">50x</option></select></label>
-      <input type="range" id="rpScrub" min="0" max="100" step="0.1" value="0" aria-label="Replay time">
-      <span id="rpTime" class="mono">00:00 / 00:00</span>
-    </div>
-    <div class="rpstatus" id="rpStatus"></div>
-    <div class="rpinbox" id="rpInbox"></div>
-  </section>
-
-  <section class="duo">
-    <div class="panel mapwrap">
-      <div class="phead"><h2>Findings map</h2><span class="hint" id="mapNote"></span></div>
-      <div id="map" role="img" aria-label="Map of reported findings"></div>
-    </div>
-
-    <div class="panel queue">
+  <!-- TAB 1: Live Mission Replay -->
+  <div class="tab-panel" id="tab-replay">
+    <section class="panel replay" id="replay">
       <div class="phead">
-        <h2>Priority queue</h2>
-        <div class="filters">
-          <select id="fSev" aria-label="Filter by severity">
-            <option value="">All severities</option><option value="3">Critical</option>
-            <option value="2">High</option><option value="1">Moderate</option>
+        <h2>Live Mission Replay</h2>
+        <span class="hint" id="rpNote">Drone positions, links and packets rendered from the simulation</span>
+      </div>
+      <canvas id="rpCanvas" role="img" aria-label="Replay of the drone simulation"></canvas>
+      <div class="rpbar">
+        <button class="act" id="rpPlay" type="button">Play</button>
+        <button class="act ghost" id="rpRestart" type="button">Restart</button>
+        <label class="spd">Speed
+          <select id="rpSpeed">
+            <option value="1">1x</option>
+            <option value="5">5x</option>
+            <option value="10" selected>10x</option>
+            <option value="25">25x</option>
+            <option value="50">50x</option>
           </select>
-          <select id="fStatus" aria-label="Filter by status">
-            <option value="">Any status</option><option value="new">New</option>
-            <option value="dispatched">Dispatched</option><option value="resolved">Resolved</option>
-          </select>
+        </label>
+        <input type="range" id="rpScrub" min="0" max="100" step="0.1" value="0" aria-label="Replay time">
+        <span id="rpTime" class="mono">00:00 / 00:00</span>
+      </div>
+      <div class="rpstatus" id="rpStatus"></div>
+      <div class="rpinbox" id="rpInbox"></div>
+    </section>
+  </div>
+
+  <!-- TAB 2: Field Map & Rescue Queue -->
+  <div class="tab-panel" id="tab-map" hidden>
+    <section class="duo">
+      <div class="panel mapwrap">
+        <div class="phead">
+          <h2>Disaster Zone Findings Map</h2>
+          <span class="hint" id="mapNote"></span>
+        </div>
+        <div id="map" role="img" aria-label="Map of reported findings"></div>
+      </div>
+
+      <div class="panel queue">
+        <div class="phead">
+          <h2>Priority Rescue Queue</h2>
+          <div class="filters">
+            <select id="fSev" aria-label="Filter by severity">
+              <option value="">All Severities</option>
+              <option value="3">Critical (High Priority)</option>
+              <option value="2">High</option>
+              <option value="1">Moderate</option>
+            </select>
+            <select id="fStatus" aria-label="Filter by status">
+              <option value="">Any Status</option>
+              <option value="new">New</option>
+              <option value="dispatched">Dispatched</option>
+              <option value="resolved">Resolved</option>
+            </select>
+          </div>
+        </div>
+        <div class="list" id="reportList"></div>
+      </div>
+    </section>
+  </div>
+
+  <!-- TAB 3: Performance & Analytics -->
+  <div class="tab-panel" id="tab-analytics" hidden>
+    <div style="display: flex; flex-direction: column; gap: 20px;">
+      <section class="duo even">
+        <div class="panel">
+          <div class="phead">
+            <h2>Latency Distribution per Report</h2>
+            <span class="hint">seconds from discovery to hub reception</span>
+          </div>
+          <div class="chartbox"><canvas id="chLatency"></canvas></div>
+          <div class="sevrow" id="sevRow"></div>
+        </div>
+        <div class="panel">
+          <div class="phead">
+            <h2>Comparative Run Benchmark</h2>
+            <span class="hint">average latency across configurations (click a bar to load)</span>
+          </div>
+          <div class="chartbox"><canvas id="chCompare"></canvas></div>
+        </div>
+      </section>
+
+      <div class="panel">
+        <div class="phead">
+          <h2>Network Flow Telemetry (FlowMonitor)</h2>
+          <span class="hint">per-hop UDP performance with store-and-forward retries</span>
+        </div>
+        <div class="tablewrap">
+          <table id="flowTable">
+            <thead>
+              <tr>
+                <th>Link Segment</th>
+                <th>Type</th>
+                <th class="n">Sent</th>
+                <th class="n">Received</th>
+                <th class="n">Lost</th>
+                <th class="n">Packet Loss</th>
+                <th class="n">Mean Delay</th>
+                <th class="n">Throughput</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
         </div>
       </div>
-      <div class="list" id="reportList"></div>
     </div>
-  </section>
+  </div>
 
-  <section class="duo even">
-    <div class="panel">
-      <div class="phead"><h2>Delay per report</h2><span class="hint">seconds from capture to hub</span></div>
-      <div class="chartbox"><canvas id="chLatency"></canvas></div>
-      <div class="sevrow" id="sevRow"></div>
-    </div>
-    <div class="panel">
-      <div class="phead"><h2>Compare runs</h2><span class="hint">average delay, click a bar to open that run</span></div>
-      <div class="chartbox"><canvas id="chCompare"></canvas></div>
-    </div>
-  </section>
-
-  <section class="duo even">
-    <div class="panel">
-      <div class="phead"><h2>Network performance (FlowMonitor)</h2><span class="hint">lost packets were resent until acknowledged</span></div>
-      <div class="tablewrap">
-        <table id="flowTable">
-          <thead><tr><th>Link</th><th>Type</th><th class="n">Sent</th><th class="n">Received</th><th class="n">Lost</th><th class="n">Loss</th><th class="n">Mean delay</th><th class="n">Throughput</th></tr></thead>
-          <tbody></tbody>
-        </table>
-      </div>
-    </div>
+  <!-- TAB 4: Mission Event Log -->
+  <div class="tab-panel" id="tab-events" hidden>
     <div class="panel">
       <div class="phead">
-        <h2>Event timeline</h2>
-        <label class="chk"><input type="checkbox" id="evAll"> include packet-level events</label>
+        <h2>Mission Event Log</h2>
+        <label class="chk">
+          <input type="checkbox" id="evAll">
+          Include low-level packet transmissions
+        </label>
       </div>
       <div class="events" id="events"></div>
     </div>
-  </section>
+  </div>
+
 </main>
 
 <section id="empty" class="emptystate" hidden>
-  <h2>No simulation data yet</h2>
+  <h2>No simulation data found</h2>
   <p>Run the NS-3 simulation and import its output, then reload this page:</p>
   <pre>cd backend
 python importer.py --all ../data/sample_runs --reset</pre>

@@ -1,7 +1,7 @@
 /* NGO dashboard: talks to the Flask API in backend/app.py */
 (() => {
   const SEV = { 3: 'Critical', 2: 'High', 1: 'Moderate' };
-  const SEV_COL = { 3: '#C4381F', 2: '#D9820B', 1: '#51636B' };
+  const SEV_COL = { 3: '#FB7185', 2: '#FBBF24', 1: '#94A3B8' };
   const $ = id => document.getElementById(id);
   const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const fmt = (v, d = 1) => (v === null || v === undefined || isNaN(v)) ? '-' : Number(v).toFixed(d);
@@ -32,6 +32,8 @@
     $('app').hidden = false;
     rebuildRunSelect();
     $('runSelect').onchange = e => loadRun(+e.target.value);
+    initTabs();
+    initToggleRunner();
     initRunner();
     $('fSev').onchange = $('fStatus').onchange = () => { renderList(); renderMarkers(false); };
     $('evAll').onchange = renderEvents;
@@ -42,6 +44,39 @@
 
   function rebuildRunSelect() {
     $('runSelect').innerHTML = state.runs.map(r => `<option value="${r.id}">${esc(r.name)}</option>`).join('');
+  }
+
+  /* ------------------------------------------------- tabs & runner drawer */
+  function initTabs() {
+    const tabs = document.querySelectorAll('.tab-btn');
+    tabs.forEach(btn => {
+      btn.addEventListener('click', () => {
+        tabs.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        const target = btn.dataset.tab;
+        document.querySelectorAll('.tab-panel').forEach(p => {
+          p.hidden = (target !== 'tab-all' && p.id !== target);
+        });
+        setTimeout(() => {
+          if (state.map) state.map.invalidateSize();
+          if (window.Replay) window.Replay.resize();
+          if (state.chLat) state.chLat.resize();
+          if (state.chCmp) state.chCmp.resize();
+        }, 50);
+      });
+    });
+  }
+
+  function initToggleRunner() {
+    const btn = $('btnToggleRunner');
+    const runner = $('runner');
+    if (!btn || !runner) return;
+    btn.addEventListener('click', () => {
+      runner.open = !runner.open;
+      if (runner.open) {
+        runner.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    });
   }
 
   /* ------------------------------------------------- run a new simulation */
@@ -56,7 +91,7 @@
                      name: $('rName').value.trim() };
       const d1 = $('rDown1').value, d2 = $('rDown2').value;
       if (d1 !== '' || d2 !== '') { body.towerDownStart = d1 === '' ? 0 : +d1; body.towerDownEnd = d2 === '' ? 900 : +d2; }
-      btn.disabled = true; msg.className = 'hint'; msg.textContent = 'Running NS-3 ...';
+      btn.disabled = true; msg.className = 'hint'; msg.textContent = 'Running simulation ...';
       try {
         const r = await fetch('/api/simulate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
         const j = await r.json();
@@ -64,6 +99,11 @@
         state.runs = await api('/api/runs'); rebuildRunSelect();
         await loadRun(j.run_id);
         msg.textContent = j.summary;
+        
+        // Switch to replay tab so user immediately sees results
+        const replayTabBtn = document.querySelector('.tab-btn[data-tab="tab-replay"]');
+        if (replayTabBtn && !replayTabBtn.classList.contains('active')) replayTabBtn.click();
+        if ($('runner')) $('runner').open = false;
         if ($('replay').scrollIntoView) $('replay').scrollIntoView({ behavior: 'smooth', block: 'start' });
         if (window.Replay) Replay.play();
       } catch (err) { msg.className = 'hint err'; msg.textContent = err.message; }
@@ -93,13 +133,13 @@
     $('sDisp').textContent = (s.dispatched || 0) + (s.resolved || 0);
     $('sResolved').textContent = `${s.resolved || 0} resolved`;
     const chips = [
-      `Scenario: ${s.scenario}`, `Relay: ${s.relay_mode}`, `Drone-to-drone range: ${s.drone_range_m} m`,
-      `Tower coverage: ${s.tower_range_m} m`, `Base packet loss: ${Math.round(s.loss_base * 100)}%`,
-      `Report size: ${(s.image_bytes / 1000).toFixed(0)} KB`, `Seed: ${s.seed}`];
+      `Scenario: ${s.scenario}`, `Relay: ${s.relay_mode}`, `Drone Range: ${s.drone_range_m} m`,
+      `Tower Radius: ${s.tower_range_m} m`, `Base Loss: ${Math.round(s.loss_base * 100)}%`,
+      `Payload: ${(s.image_bytes / 1000).toFixed(0)} KB`, `Seed: ${s.seed}`];
     let html = chips.map(c => `<span class="chip">${esc(c)}</span>`).join('');
-    if (s.tower_down_start >= 0) html += `<span class="chip warn">Tower offline ${s.tower_down_start} to ${s.tower_down_end} s</span>`;
+    if (s.tower_down_start >= 0) html += `<span class="chip warn">Tower outage: ${s.tower_down_start}s to ${s.tower_down_end}s</span>`;
     $('params').innerHTML = html;
-    const sev = s.by_severity.map(x => `<span class="chip">${esc(x.label)}: average <b>${fmt(x.avg_latency_s)} s</b> over ${x.n} report${x.n === 1 ? '' : 's'}</span>`).join('');
+    const sev = s.by_severity.map(x => `<span class="chip">${esc(x.label)}: average <b>${fmt(x.avg_latency_s)} s</b> (${x.n} report${x.n === 1 ? '' : 's'})</span>`).join('');
     $('sevRow').innerHTML = sev;
   }
 
@@ -121,8 +161,8 @@
         <div class="bar"></div>
         <div>
           <div class="row1"><b>${esc(r.finding)}</b><span class="badge s${r.severity}">${esc(r.severity_label)}</span></div>
-          <div class="meta">${esc(r.pkt_id)} at ${fmt(r.lat, 5)}, ${fmt(r.lon, 5)}</div>
-          <div class="meta">Delay ${fmt(r.latency_s)} s${r.retransmissions ? `, resent ${r.retransmissions} time${r.retransmissions > 1 ? 's' : ''}` : ''}</div>
+          <div class="meta">${esc(r.pkt_id)} • ${fmt(r.lat, 5)}, ${fmt(r.lon, 5)}</div>
+          <div class="meta">Delivery Delay: ${fmt(r.latency_s)} s${r.retransmissions ? ` • Resent ${r.retransmissions}x` : ''}</div>
           <div class="acts">${actionButtons(r)}<span class="st ${r.status}">${esc(r.status)}</span></div>
         </div>
       </div>`).join('');
@@ -159,25 +199,25 @@
     });
     // context: simulated disaster zone, tower and hub
     const a = toLatLon(0, 0), b = toLatLon(600, 700);
-    L.rectangle([a, b], { color: '#C4381F', weight: 2, dashArray: '6 5', fillOpacity: .06 }).addTo(state.map).bindTooltip('Disaster zone (no network)', { sticky: true });
-    L.circleMarker(toLatLon(1100, 350), { radius: 7, color: '#1E8F5A', fillColor: '#1E8F5A', fillOpacity: 1 }).addTo(state.map).bindTooltip('Communication tower');
-    L.circleMarker(toLatLon(1300, 350), { radius: 7, color: '#13242B', fillColor: '#13242B', fillOpacity: 1 }).addTo(state.map).bindTooltip('Main hub');
-    $('mapNote').textContent = 'Circle size and colour show severity';
+    L.rectangle([a, b], { color: '#FB7185', weight: 2, dashArray: '6 5', fillOpacity: .08 }).addTo(state.map).bindTooltip('Disaster zone (no cellular network)', { sticky: true });
+    L.circleMarker(toLatLon(1100, 350), { radius: 7, color: '#34D399', fillColor: '#34D399', fillOpacity: 1 }).addTo(state.map).bindTooltip('Communication tower');
+    L.circleMarker(toLatLon(1300, 350), { radius: 7, color: '#6366F1', fillColor: '#6366F1', fillOpacity: 1 }).addTo(state.map).bindTooltip('Main Relief Hub');
+    $('mapNote').textContent = 'Circle size and color correspond to finding severity';
   }
   function popupHtml(r) {
     return `<div class="pop"><b>${esc(r.finding)}</b>
-      <span class="m">${esc(r.severity_label)}, ${esc(r.pkt_id)}</span><br>
+      <span class="m">${esc(r.severity_label)} • ${esc(r.pkt_id)}</span><br>
       <span class="m">${fmt(r.lat, 5)}, ${fmt(r.lon, 5)}</span><br>
-      <span class="m">Delay ${fmt(r.latency_s)} s, status ${esc(r.status)}</span><br>
-      <div style="margin-top:6px">${actionButtons(r)}</div></div>`;
+      <span class="m">Delay ${fmt(r.latency_s)} s • Status: ${esc(r.status)}</span><br>
+      <div style="margin-top:8px">${actionButtons(r)}</div></div>`;
   }
   function renderMarkers(fit) {
     if (!state.map) return;
     state.layer.clearLayers(); state.markers = {};
     const pts = [];
     filtered().forEach(r => {
-      const color = r.status === 'resolved' ? '#1E8F5A' : SEV_COL[r.severity];
-      const m = L.circleMarker([r.lat, r.lon], { radius: 5 + r.severity * 2, color: '#fff', weight: 2, fillColor: color, fillOpacity: r.status === 'resolved' ? .6 : .95 })
+      const color = r.status === 'resolved' ? '#34D399' : SEV_COL[r.severity];
+      const m = L.circleMarker([r.lat, r.lon], { radius: 5 + r.severity * 2, color: '#0F172A', weight: 2, fillColor: color, fillOpacity: r.status === 'resolved' ? .7 : 1 })
         .bindPopup(popupHtml(r)).addTo(state.layer);
       state.markers[r.id] = m; pts.push([r.lat, r.lon]);
     });
@@ -187,7 +227,8 @@
 
   /* --------------------------------------------------------------- charts */
   function chartDefaults() {
-    Chart.defaults.color = css('--muted'); Chart.defaults.borderColor = css('--line');
+    Chart.defaults.color = '#94A3B8';
+    Chart.defaults.borderColor = 'rgba(255, 255, 255, 0.08)';
     Chart.defaults.font.family = css('--font');
   }
   function renderLatencyChart() {
@@ -197,10 +238,10 @@
     if (state.chLat) state.chLat.destroy();
     state.chLat = new Chart($('chLatency'), {
       type: 'bar',
-      data: { labels: rows.map(r => r.pkt_id), datasets: [{ data: rows.map(r => r.latency_s), backgroundColor: rows.map(r => SEV_COL[r.severity]), borderRadius: 3 }] },
+      data: { labels: rows.map(r => r.pkt_id), datasets: [{ data: rows.map(r => r.latency_s), backgroundColor: rows.map(r => SEV_COL[r.severity]), borderRadius: 4 }] },
       options: { maintainAspectRatio: false, plugins: { legend: { display: false },
         tooltip: { callbacks: { label: c => `${fmt(c.parsed.y)} s`, afterLabel: c => { const r = rows[c.dataIndex]; return `${r.finding} (${r.severity_label}), resent ${r.retransmissions}x`; } } } },
-        scales: { y: { beginAtZero: true, title: { display: true, text: 'seconds' } }, x: { ticks: { maxRotation: 60, font: { size: 10 } } } } }
+        scales: { y: { beginAtZero: true, grid: { color: 'rgba(255, 255, 255, 0.06)' }, title: { display: true, text: 'Seconds' } }, x: { grid: { display: false }, ticks: { maxRotation: 60, font: { size: 10 } } } } }
     });
   }
   function renderCompareChart() {
@@ -211,15 +252,15 @@
     state.chCmp = new Chart($('chCompare'), {
       type: 'bar',
       data: { labels: runs.map(r => r.name), datasets: [{ data: runs.map(r => r.avg_latency_s),
-        backgroundColor: runs.map(r => r.id === state.runId ? '#0F6E7A' : (r.relay_mode === 'adaptive' ? '#8FC3CB' : '#B9C4C8')),
-        borderRadius: 3 }] },
+        backgroundColor: runs.map(r => r.id === state.runId ? '#6366F1' : (r.relay_mode === 'adaptive' ? '#38BDF8' : '#334155')),
+        borderRadius: 4 }] },
       options: { indexAxis: 'y', maintainAspectRatio: false,
         onClick: (_e, els) => { if (els.length) loadRun(runs[els[0].index].id); },
         onHover: (e, els) => { e.native.target.style.cursor = els.length ? 'pointer' : 'default'; },
         plugins: { legend: { display: false }, tooltip: { callbacks: {
-          label: c => `average ${fmt(c.parsed.x)} s`,
+          label: c => `Average ${fmt(c.parsed.x)} s`,
           afterLabel: c => { const r = runs[c.dataIndex]; return `${r.relay_mode} relay, range ${r.drone_range_m} m, loss ${Math.round(r.loss_base * 100)}%, ${r.delivered}/${r.captured} delivered`; } } } },
-        scales: { x: { beginAtZero: true, title: { display: true, text: 'average delay (s)' } }, y: { ticks: { font: { size: 11 } } } } }
+        scales: { x: { beginAtZero: true, grid: { color: 'rgba(255, 255, 255, 0.06)' }, title: { display: true, text: 'Average Latency (s)' } }, y: { grid: { display: false }, ticks: { font: { size: 11 } } } } }
     });
   }
 
@@ -227,12 +268,12 @@
   function renderFlows() {
     const rows = state.flows.slice().sort((a, b) => (a.kind === b.kind ? a.flow_id - b.flow_id : a.kind === 'data' ? -1 : 1));
     document.querySelector('#flowTable tbody').innerHTML = rows.map(f => `
-      <tr><td>${esc(f.src)} to ${esc(f.dst)}</td><td>${f.kind === 'data' ? 'Report data' : 'Acknowledgement'}</td>
+      <tr><td>${esc(f.src)} → ${esc(f.dst)}</td><td>${f.kind === 'data' ? 'Report Payload' : 'Acknowledgement'}</td>
       <td class="n">${f.tx_packets}</td><td class="n">${f.rx_packets}</td><td class="n">${f.lost_packets}</td>
       <td class="n">${fmt(f.loss_pct)}%</td><td class="n">${fmt(f.mean_delay_ms)} ms</td><td class="n">${fmt(f.throughput_kbps, 2)} kbps</td></tr>`).join('');
   }
   function eventText(e) {
-    if (e.node === 'Link') return { t: `${e.detail} link ${e.event === 'up' ? 'connected' : 'lost'}`, c: e.event === 'up' ? 'good' : 'bad' };
+    if (e.node === 'Link') return { t: `${e.detail} link ${e.event === 'up' ? 'established' : 'lost'}`, c: e.event === 'up' ? 'good' : 'bad' };
     if (e.node === 'Tower') return { t: e.detail, c: e.event === 'offline' ? 'bad' : 'good' };
     if (e.event === 'captured') return { t: 'Captured ' + e.detail, c: '' };
     return { t: e.detail ? `${e.event.replace('_', ' ')}: ${e.detail}` : e.event.replace('_', ' '), c: e.event === 'rx_lost' ? 'bad' : '' };
@@ -242,7 +283,7 @@
     const evs = state.events.filter(e => all || !packet.has(e.event));
     $('events').innerHTML = evs.map(e => { const x = eventText(e);
       return `<div class="ev"><span class="t">${mmss(e.time_s)}</span><span>${esc(e.node)}</span><span class="${x.c}">${esc(x.t)}</span></div>`; }).join('')
-      || '<div class="none">No events.</div>';
+      || '<div class="none">No events recorded.</div>';
   }
 
   init().catch(e => { console.error(e); });

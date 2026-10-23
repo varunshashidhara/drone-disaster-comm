@@ -3,7 +3,7 @@
    and from the run's event timeline (which hop forwarded which report, and when). */
 (() => {
   const $ = id => document.getElementById(id);
-  const SEV_COL = { 3: '#C4381F', 2: '#D9820B', 1: '#51636B' };
+  const SEV_COL = { 3: '#FB7185', 2: '#FBBF24', 1: '#94A3B8' };
   const SEV_LABEL = { 3: 'Critical', 2: 'High', 1: 'Moderate' };
   const WORLD = { x0: -40, y0: -40, w: 1440, h: 860 };      // metres shown on screen
   const STATE_TEXT = { survey: 'surveying the zone', offload: 'handing data to relay', rtl: 'returning to base', done: 'landed' };
@@ -15,7 +15,6 @@
 
   const mmss = s => String(Math.floor(s / 60)).padStart(2, '0') + ':' + String(Math.floor(s % 60)).padStart(2, '0');
   const sx = x => OX + x * K, sy = y => OY + y * K;
-  const isDark = () => window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
   const norm = d => String(d).replace(/PKT-(\d+)/, (m, n) => 'PKT-' + n.padStart(3, '0'));
 
   /* --------------------------------------------------------------- loading */
@@ -33,11 +32,11 @@
     S.hops = events.filter(e => e.event === 'forwarded')
       .map(e => ({ t: e.time_s, node: e.node, sev: S.sevOf[norm(e.detail)] || 2 })).sort((a, b) => a.t - b.t);
     S.path = [];
-    for (let i = 0; i < 7; i++) {                      // same lawnmower path as the simulator
+    for (let i = 0; i < 7; i++) {
       const y = 50 + i * 100, l = 50, r = res.layout.zone.w - 50;
       if (i % 2 === 0) S.path.push([l, y], [r, y]); else S.path.push([r, y], [l, y]);
     }
-    $('rpNote').textContent = 'Drone positions, links and packets come from the NS-3 run';
+    $('rpNote').textContent = 'Drone positions, links and packets rendered directly from simulation trace';
     $('rpScrub').max = S.dur; $('rpScrub').value = 0;
     resize(); draw(); updateUi();
   }
@@ -52,13 +51,12 @@
     return { row: a, p: { x: a[1] + (b[1] - a[1]) * f, y: a[2] + (b[2] - a[2]) * f },
              r: { x: a[3] + (b[3] - a[3]) * f, y: a[4] + (b[4] - a[4]) * f } };
   }
-  // packet dots are shown for a time that scales with the speed so they stay visible
   const flight = () => Math.max(0.9, 0.8 * S.speed);
 
   /* ---------------------------------------------------------------- canvas */
   function resize() {
     dpr = window.devicePixelRatio || 1;
-    W = cv.clientWidth || 900; H = Math.round(W * 0.56);
+    W = cv.clientWidth || 900; H = Math.round(W * 0.52);
     cv.style.height = H + 'px'; cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
     K = Math.min(W / WORLD.w, H / WORLD.h);
     OX = (W - WORLD.w * K) / 2 - WORLD.x0 * K; OY = (H - WORLD.h * K) / 2 - WORLD.y0 * K;
@@ -68,94 +66,94 @@
 
   function drawDrone(p, color, label, queue) {
     const x = sx(p.x), y = sy(p.y), a = S.t * 14;
-    ctx.save(); ctx.translate(x, y); ctx.strokeStyle = color; ctx.lineWidth = 2;
+    ctx.save(); ctx.translate(x, y); ctx.strokeStyle = color; ctx.lineWidth = 2.2;
     for (const [ox, oy] of [[-9, -9], [9, -9], [-9, 9], [9, 9]]) {
       ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(ox, oy); ctx.stroke();
-      ctx.fillStyle = color + '55'; ctx.beginPath(); ctx.arc(ox, oy, 5.5, 0, 7); ctx.fill();
+      ctx.fillStyle = color + '44'; ctx.beginPath(); ctx.arc(ox, oy, 5.5, 0, 7); ctx.fill();
       ctx.beginPath(); ctx.moveTo(ox + Math.cos(a) * 5.5, oy + Math.sin(a) * 5.5); ctx.lineTo(ox - Math.cos(a) * 5.5, oy - Math.sin(a) * 5.5); ctx.stroke();
     }
-    ctx.fillStyle = color; ctx.beginPath(); ctx.arc(0, 0, 6, 0, 7); ctx.fill();
-    ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(0, 0, 2, 0, 7); ctx.fill();
-    ctx.fillStyle = css('--ink'); ctx.font = '600 12px "Public Sans", sans-serif'; ctx.textAlign = 'center';
+    ctx.fillStyle = color; ctx.beginPath(); ctx.arc(0, 0, 6.5, 0, 7); ctx.fill();
+    ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(0, 0, 2.5, 0, 7); ctx.fill();
+    ctx.fillStyle = '#F8FAFC'; ctx.font = '700 12px "Plus Jakarta Sans", sans-serif'; ctx.textAlign = 'center';
     ctx.fillText(label, 0, 26);
-    if (queue > 0) {                                   // queue badge
+    if (queue > 0) {
       ctx.fillStyle = color; ctx.beginPath(); ctx.arc(14, -14, 9, 0, 7); ctx.fill();
-      ctx.fillStyle = '#fff'; ctx.font = '700 11px "Public Sans", sans-serif'; ctx.fillText(queue, 14, -10);
+      ctx.fillStyle = '#fff'; ctx.font = '700 11px "Plus Jakarta Sans", sans-serif'; ctx.fillText(queue, 14, -10);
     }
     ctx.restore();
   }
 
   function dashedLine(a, b, color) {
-    ctx.save(); ctx.strokeStyle = color; ctx.lineWidth = 2.5; ctx.setLineDash([7, 6]); ctx.lineDashOffset = -S.t * 6 * K;
+    ctx.save(); ctx.strokeStyle = color; ctx.lineWidth = 2.5; ctx.setLineDash([7, 6]); ctx.lineDashOffset = -S.t * 8 * K;
     ctx.beginPath(); ctx.moveTo(sx(a.x), sy(a.y)); ctx.lineTo(sx(b.x), sy(b.y)); ctx.stroke(); ctx.restore();
   }
   function packet(a, b, f, sev) {
     const x = sx(a.x + (b.x - a.x) * f), y = sy(a.y + (b.y - a.y) * f);
-    ctx.fillStyle = SEV_COL[sev]; ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5;
+    ctx.fillStyle = SEV_COL[sev]; ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.8;
     ctx.beginPath(); ctx.rect(x - 5.5, y - 4.5, 11, 9); ctx.fill(); ctx.stroke();
   }
 
   function draw() {
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    ctx.fillStyle = isDark() ? '#101C20' : '#EAEFEA'; ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = '#080C14'; ctx.fillRect(0, 0, W, H);
     if (!S.data) return;
     const L = S.data.layout, tower = L.tower, hub = L.hub, base = L.base;
     const st = stateAt(S.t), row = st.row, towerUp = row[10] === 1;
 
-    // grid every 100 m
-    ctx.strokeStyle = 'rgba(120,140,140,.16)'; ctx.lineWidth = 1; ctx.beginPath();
+    // tactical radar grid
+    ctx.strokeStyle = 'rgba(255,255,255,.04)'; ctx.lineWidth = 1; ctx.beginPath();
     for (let x = 0; x <= 1400; x += 100) { ctx.moveTo(sx(x), sy(-40)); ctx.lineTo(sx(x), sy(820)); }
     for (let y = 0; y <= 800; y += 100) { ctx.moveTo(sx(-40), sy(y)); ctx.lineTo(sx(1400), sy(y)); }
     ctx.stroke();
 
     // disaster zone
-    ctx.fillStyle = 'rgba(196,56,31,.10)'; ctx.fillRect(sx(0), sy(0), L.zone.w * K, L.zone.h * K);
-    ctx.save(); ctx.strokeStyle = '#C4381F'; ctx.lineWidth = 2; ctx.setLineDash([8, 6]);
+    ctx.fillStyle = 'rgba(244,63,94,.08)'; ctx.fillRect(sx(0), sy(0), L.zone.w * K, L.zone.h * K);
+    ctx.save(); ctx.strokeStyle = '#FB7185'; ctx.lineWidth = 2; ctx.setLineDash([8, 6]);
     ctx.strokeRect(sx(0), sy(0), L.zone.w * K, L.zone.h * K); ctx.restore();
-    ctx.fillStyle = '#C4381F'; ctx.font = '600 12px "Public Sans", sans-serif'; ctx.textAlign = 'left';
-    ctx.fillText('Disaster zone: no mobile network', sx(4), sy(-12));
+    ctx.fillStyle = '#FB7185'; ctx.font = '700 12px "Plus Jakarta Sans", sans-serif'; ctx.textAlign = 'left';
+    ctx.fillText('Disaster Zone: Cellular Offline', sx(6), sy(-12));
 
     // planned survey path
-    ctx.save(); ctx.strokeStyle = 'rgba(31,95,191,.30)'; ctx.setLineDash([3, 6]); ctx.beginPath();
+    ctx.save(); ctx.strokeStyle = 'rgba(99,102,241,.35)'; ctx.setLineDash([3, 6]); ctx.lineWidth = 1.5; ctx.beginPath();
     S.path.forEach((p, i) => i ? ctx.lineTo(sx(p[0]), sy(p[1])) : ctx.moveTo(sx(p[0]), sy(p[1]))); ctx.stroke(); ctx.restore();
 
     // tower coverage
     const tr = (S.run.tower_range_m || 600) * K;
-    ctx.fillStyle = towerUp ? 'rgba(30,143,90,.10)' : 'rgba(196,56,31,.10)';
-    ctx.strokeStyle = towerUp ? 'rgba(30,143,90,.85)' : 'rgba(196,56,31,.85)'; ctx.lineWidth = 1.5; ctx.setLineDash([6, 5]);
+    ctx.fillStyle = towerUp ? 'rgba(52,211,153,.08)' : 'rgba(244,63,94,.08)';
+    ctx.strokeStyle = towerUp ? 'rgba(52,211,153,.75)' : 'rgba(244,63,94,.75)'; ctx.lineWidth = 1.5; ctx.setLineDash([6, 5]);
     ctx.beginPath(); ctx.arc(sx(tower.x), sy(tower.y), tr, 0, 7); ctx.fill(); ctx.stroke(); ctx.setLineDash([]);
 
     // wired backhaul + hub + tower + base
-    ctx.strokeStyle = css('--muted'); ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(sx(tower.x), sy(tower.y)); ctx.lineTo(sx(hub.x), sy(hub.y)); ctx.stroke();
-    ctx.fillStyle = towerUp ? '#1E8F5A' : '#C4381F';
+    ctx.strokeStyle = '#475569'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(sx(tower.x), sy(tower.y)); ctx.lineTo(sx(hub.x), sy(hub.y)); ctx.stroke();
+    ctx.fillStyle = towerUp ? '#10B981' : '#FB7185';
     ctx.beginPath(); ctx.moveTo(sx(tower.x), sy(tower.y) - 20); ctx.lineTo(sx(tower.x) - 11, sy(tower.y) + 12); ctx.lineTo(sx(tower.x) + 11, sy(tower.y) + 12); ctx.fill();
-    ctx.fillStyle = css('--ink'); ctx.font = '600 12px "Public Sans", sans-serif'; ctx.textAlign = 'center';
-    ctx.fillText(towerUp ? 'Communication tower' : 'Tower OFFLINE', sx(tower.x), sy(tower.y) + 30);
+    ctx.fillStyle = '#F8FAFC'; ctx.font = '700 12px "Plus Jakarta Sans", sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText(towerUp ? 'Communication Tower' : 'Tower OFFLINE', sx(tower.x), sy(tower.y) + 30);
     ctx.fillRect(sx(hub.x) - 16, sy(hub.y) - 22, 32, 44);
-    ctx.fillStyle = isDark() ? '#101C20' : '#EAEFEA';
+    ctx.fillStyle = '#0F172A';
     for (let r = 0; r < 4; r++) for (let c = 0; c < 2; c++) ctx.fillRect(sx(hub.x) - 10 + c * 12, sy(hub.y) - 16 + r * 10, 7, 6);
-    ctx.fillStyle = css('--ink'); ctx.fillText('Main hub (NGO)', sx(hub.x), sy(hub.y) + 38);
-    ctx.strokeStyle = css('--muted'); ctx.lineWidth = 2; ctx.strokeRect(sx(base.x) - 10, sy(base.y) - 10, 20, 20);
-    ctx.fillStyle = css('--muted'); ctx.fillText('Launch base', sx(base.x) + 58, sy(base.y) + 4);
+    ctx.fillStyle = '#F8FAFC'; ctx.fillText('Main Hub (NGO Desk)', sx(hub.x), sy(hub.y) + 38);
+    ctx.strokeStyle = '#475569'; ctx.lineWidth = 2; ctx.strokeRect(sx(base.x) - 10, sy(base.y) - 10, 20, 20);
+    ctx.fillStyle = '#94A3B8'; ctx.fillText('Drone Base', sx(base.x) + 54, sy(base.y) + 4);
 
-    // findings: grey until found, then coloured by severity
+    // findings: subtle until found, then colored by severity
     for (const p of S.data.pois) {
       const found = p.found_s >= 0 && p.found_s <= S.t;
       ctx.beginPath(); ctx.arc(sx(p.x), sy(p.y), found ? 7 : 3.5, 0, 7);
-      ctx.fillStyle = found ? SEV_COL[p.severity] : '#9AA9AE'; ctx.fill();
+      ctx.fillStyle = found ? SEV_COL[p.severity] : '#334155'; ctx.fill();
       if (found) { ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke(); }
     }
 
     // radio ranges and camera footprint
-    ctx.save(); ctx.strokeStyle = 'rgba(217,130,11,.6)'; ctx.setLineDash([4, 6]); ctx.lineWidth = 1.5;
+    ctx.save(); ctx.strokeStyle = 'rgba(56,189,248,.5)'; ctx.setLineDash([4, 6]); ctx.lineWidth = 1.5;
     ctx.beginPath(); ctx.arc(sx(st.r.x), sy(st.r.y), (S.run.drone_range_m || 450) * K, 0, 7); ctx.stroke(); ctx.restore();
-    if (row[5] !== 'done') { ctx.fillStyle = 'rgba(31,95,191,.12)'; ctx.beginPath(); ctx.arc(sx(st.p.x), sy(st.p.y), L.cam_r * K, 0, 7); ctx.fill(); }
+    if (row[5] !== 'done') { ctx.fillStyle = 'rgba(99,102,241,.12)'; ctx.beginPath(); ctx.arc(sx(st.p.x), sy(st.p.y), L.cam_r * K, 0, 7); ctx.fill(); }
 
     // active links
-    if (row[8] === 1) dashedLine(st.p, st.r, '#1E8F5A');
-    if (row[9] === 1) dashedLine(st.r, tower, '#1E8F5A');
+    if (row[8] === 1) dashedLine(st.p, st.r, '#10B981');
+    if (row[9] === 1) dashedLine(st.r, tower, '#10B981');
 
-    // packets in flight (hop completes at time h.t)
+    // packets in flight
     const win = flight();
     for (const h of S.hops) {
       if (h.t > S.t + win * 1.7) break;
@@ -164,8 +162,8 @@
       else if (h.node === 'Tower' && S.t >= h.t && S.t <= h.t + win * 0.6) packet(tower, hub, (S.t - h.t) / (win * 0.6), h.sev);
     }
 
-    drawDrone(st.r, '#D9820B', 'Relay drone', row[7]);
-    drawDrone(st.p, '#1F5FBF', 'Primary drone', row[6]);
+    drawDrone(st.r, '#38BDF8', 'Relay Drone', row[7]);
+    drawDrone(st.p, '#818CF8', 'Primary Drone', row[6]);
   }
 
   /* ----------------------------------------------------- status + hub inbox */
@@ -179,21 +177,21 @@
     if (!S.data) { $('rpStatus').innerHTML = ''; $('rpInbox').innerHTML = ''; return; }
     const row = stateAt(S.t).row, got = arrived(), total = S.data.pois.length;
     const chip = (txt, cls) => `<span class="chip ${cls || ''}">${txt}</span>`;
-    const prLink = row[8] === 1 ? chip('Primary and relay: connected', 'ok') : chip('Primary and relay: out of range, data waits in buffer', 'bad');
-    const rtLink = row[10] === 0 ? chip('Relay and tower: tower offline', 'bad') : (row[9] === 1 ? chip('Relay and tower: connected', 'ok') : chip('Relay and tower: out of range', 'bad'));
+    const prLink = row[8] === 1 ? chip('Primary ↔ Relay: Connected', 'ok') : chip('Primary ↔ Relay: Buffering Out of Range', 'bad');
+    const rtLink = row[10] === 0 ? chip('Relay ↔ Tower: Tower Offline', 'bad') : (row[9] === 1 ? chip('Relay ↔ Tower: Connected', 'ok') : chip('Relay ↔ Tower: Out of Range', 'bad'));
     const key = [row[5], row[6], row[7], row[8], row[9], row[10], row[12], got.length].join('|');
     if (key !== S.statusKey) {
       S.statusKey = key;
-      $('rpStatus').innerHTML = chip('Primary drone: ' + (STATE_TEXT[row[5]] || row[5])) + chip(`Found ${row[12]} of ${total}`) +
-        chip(`Received at hub ${got.length} of ${row[12]} found`) +
-        chip(`Primary queue ${row[6]}`) + chip(`Relay queue ${row[7]}`) + prLink + rtLink;
+      $('rpStatus').innerHTML = chip('Primary Drone: ' + (STATE_TEXT[row[5]] || row[5])) + chip(`Discovered ${row[12]} of ${total}`) +
+        chip(`Delivered to Hub: ${got.length} of ${row[12]}`) +
+        chip(`Primary Buffer: ${row[6]}`) + chip(`Relay Buffer: ${row[7]}`) + prLink + rtLink;
     }
     const ikey = String(got.length);
     if (ikey !== S.inboxKey) {
       S.inboxKey = ikey;
       $('rpInbox').innerHTML = got.length ? got.slice(-5).reverse().map(r =>
-        `<div class="rpi s${r.severity}"><i></i><div><b>${esc(r.finding)}</b> (${esc(r.severity_label)}, ${esc(r.pkt_id)}) reached the hub, delay ${Number(r.latency_s).toFixed(1)} s</div><span>${mmss(r.received_s)}</span></div>`).join('')
-        : '<span class="mono">Hub inbox is empty. Press Play.</span>';
+        `<div class="rpi s${r.severity}"><i></i><div><b>${esc(r.finding)}</b> (${esc(r.severity_label)}, ${esc(r.pkt_id)}) received at hub • Delay ${Number(r.latency_s).toFixed(1)} s</div><span>${mmss(r.received_s)}</span></div>`).join('')
+        : '<span class="mono" style="padding: 6px 0; color: var(--muted);">Hub inbox awaiting packets. Press Play to stream.</span>';
     }
   }
   const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -219,7 +217,6 @@
   $('rpSpeed').onchange = e => { S.speed = +e.target.value; };
   $('rpScrub').oninput = e => { S.t = +e.target.value; if (S.data) { draw(); updateUi(); } };
   window.addEventListener('resize', resize);
-  if (window.matchMedia) window.matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change', () => { draw(); });
 
   window.Replay = { load, play, stop, resize };
 })();
