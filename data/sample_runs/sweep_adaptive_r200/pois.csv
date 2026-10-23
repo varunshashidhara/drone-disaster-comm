@@ -1,0 +1,15 @@
+poi_id,x,y,finding,severity,found_s
+1,357.7,552.6,Submerged house,2,265.00
+2,229.3,274.2,Rising water level,2,140.00
+3,345.8,94.6,Rising water level,2,66.00
+4,473.9,430.7,Washed-out road,1,239.00
+5,481.8,187.2,Stranded people,3,91.50
+6,539.8,566.7,Rising water level,2,252.50
+7,214.1,171.8,Submerged house,2,109.00
+8,547.6,263.6,Submerged house,2,161.00
+9,408.4,620.1,Submerged house,2,318.00
+10,440.5,102.1,Stranded people,3,73.00
+11,311.3,407.0,Stranded people,3,188.00
+12,417.5,272.9,Submerged house,2,152.50
+13,184.7,451.1,Washed-out road,1,219.50
+14,116.9,330.0,Stranded people,3,198.50

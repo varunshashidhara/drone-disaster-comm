@@ -1,0 +1,118 @@
+time_s,node,event,detail
+0.00,Primary,launch,survey of 14 hidden findings
+0.50,Link,up,Relay-Tower
+66.00,Primary,captured,PKT-001 Rising water level
+73.00,Primary,captured,PKT-002 Stranded people
+91.50,Primary,captured,PKT-003 Stranded people
+109.00,Primary,captured,PKT-004 Submerged house
+140.00,Primary,captured,PKT-005 Rising water level
+152.50,Primary,captured,PKT-006 Submerged house
+156.00,Link,up,Primary-Relay
+157.08,Relay,received,PKT-002
+157.11,Primary,forwarded,PKT-002
+157.20,Relay,received,PKT-003
+157.20,Primary,forwarded,PKT-003
+157.27,Relay,received,PKT-001
+157.27,Primary,forwarded,PKT-001
+157.34,Relay,received,PKT-004
+157.34,Primary,forwarded,PKT-004
+157.41,Relay,received,PKT-005
+157.42,Primary,forwarded,PKT-005
+157.49,Relay,rx_lost,PKT-006
+158.64,Tower,rx_lost,PKT-002
+158.66,Relay,received,PKT-006
+158.66,Primary,forwarded,PKT-006
+159.58,Tower,received,PKT-002
+159.59,Hub,received,PKT-002
+159.59,Relay,forwarded,PKT-002
+159.59,Tower,forwarded,PKT-002
+159.67,Tower,received,PKT-003
+159.67,Relay,forwarded,PKT-003
+159.68,Hub,received,PKT-003
+159.68,Tower,forwarded,PKT-003
+159.74,Tower,rx_lost,PKT-001
+161.00,Primary,captured,PKT-007 Submerged house
+161.15,Relay,received,PKT-007
+161.17,Tower,received,PKT-001
+161.18,Primary,forwarded,PKT-007
+161.18,Relay,forwarded,PKT-001
+161.18,Hub,received,PKT-001
+161.19,Tower,forwarded,PKT-001
+161.25,Tower,received,PKT-004
+161.25,Relay,forwarded,PKT-004
+161.26,Hub,received,PKT-004
+161.26,Tower,forwarded,PKT-004
+161.32,Tower,received,PKT-005
+161.32,Relay,forwarded,PKT-005
+161.33,Hub,received,PKT-005
+161.34,Tower,forwarded,PKT-005
+161.40,Tower,received,PKT-006
+161.40,Relay,forwarded,PKT-006
+161.40,Hub,received,PKT-006
+161.41,Tower,forwarded,PKT-006
+161.47,Tower,received,PKT-007
+161.47,Relay,forwarded,PKT-007
+161.48,Hub,received,PKT-007
+161.48,Tower,forwarded,PKT-007
+184.00,Link,down,Primary-Relay
+188.00,Primary,captured,PKT-008 Stranded people
+198.50,Primary,captured,PKT-009 Stranded people
+219.50,Primary,captured,PKT-010 Washed-out road
+239.00,Primary,captured,PKT-011 Washed-out road
+239.00,Link,up,Primary-Relay
+239.08,Relay,received,PKT-008
+239.16,Tower,received,PKT-008
+239.16,Relay,forwarded,PKT-008
+239.16,Primary,forwarded,PKT-008
+239.17,Hub,received,PKT-008
+239.17,Tower,forwarded,PKT-008
+239.24,Relay,received,PKT-009
+239.32,Tower,received,PKT-009
+239.32,Relay,forwarded,PKT-009
+239.32,Primary,forwarded,PKT-009
+239.33,Hub,received,PKT-009
+239.33,Tower,forwarded,PKT-009
+239.39,Relay,rx_lost,PKT-010
+240.56,Relay,received,PKT-010
+240.63,Tower,received,PKT-010
+240.63,Relay,forwarded,PKT-010
+240.63,Primary,forwarded,PKT-010
+240.63,Hub,received,PKT-010
+240.64,Tower,forwarded,PKT-010
+240.69,Relay,received,PKT-011
+240.75,Tower,received,PKT-011
+240.76,Relay,forwarded,PKT-011
+240.76,Primary,forwarded,PKT-011
+240.76,Hub,received,PKT-011
+240.77,Tower,forwarded,PKT-011
+252.50,Primary,captured,PKT-012 Rising water level
+252.57,Relay,rx_lost,PKT-012
+253.57,Relay,rx_lost,PKT-012
+254.57,Relay,rx_lost,PKT-012
+255.00,Link,down,Primary-Relay
+265.00,Primary,captured,PKT-013 Submerged house
+318.00,Primary,captured,PKT-014 Submerged house
+331.00,Primary,survey_done,flying to relay to offload 3 packets
+338.50,Link,up,Primary-Relay
+338.57,Relay,received,PKT-012
+338.64,Tower,received,PKT-012
+338.65,Relay,forwarded,PKT-012
+338.65,Primary,forwarded,PKT-012
+338.65,Hub,received,PKT-012
+338.66,Tower,forwarded,PKT-012
+338.72,Relay,received,PKT-013
+338.79,Tower,rx_lost,PKT-013
+338.79,Primary,forwarded,PKT-013
+338.86,Relay,received,PKT-014
+338.86,Primary,forwarded,PKT-014
+339.00,Primary,offload_done,returning to base
+340.07,Tower,received,PKT-013
+340.07,Relay,forwarded,PKT-013
+340.08,Hub,received,PKT-013
+340.08,Tower,forwarded,PKT-013
+340.15,Tower,received,PKT-014
+340.15,Relay,forwarded,PKT-014
+340.15,Hub,received,PKT-014
+340.16,Tower,forwarded,PKT-014
+341.50,Link,down,Primary-Relay
+368.00,Primary,landed,mission complete

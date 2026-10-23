@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Drone-Based Disaster Communication System - Simulator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#E3E9E7; --panel:#FFFFFF; --ink:#16242B; --muted:#5C6F76; --line:#C9D3D0;
+  --blue:#1F5FBF; --amber:#D9820B; --red:#C4381F; --green:#1E8F5A; --slate:#51636B;
+  --sans:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root{ --bg:#10181B; --panel:#192327; --ink:#E4ECEA; --muted:#93A5AB; --line:#2C3A3F; }
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font:14px/1.45 var(--sans)}
+header{padding:16px 20px 8px;max-width:1500px;margin:0 auto}
+header h1{margin:0;font-size:20px;font-weight:600;letter-spacing:-.01em}
+header p{margin:2px 0 0;color:var(--muted);max-width:90ch}
+.wrap{display:grid;grid-template-columns:minmax(0,1fr) 390px;gap:14px;padding:8px 20px 24px;max-width:1500px;margin:0 auto}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:8px}
+.controls{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px 16px;padding:12px 14px;margin-bottom:10px;align-items:end}
+.controls label{display:flex;flex-direction:column;gap:3px;font-size:12px;color:var(--muted)}
+.controls label b{color:var(--ink);font-weight:500;font-family:var(--mono)}
+.controls select,.controls input[type=number]{font:inherit;padding:5px 6px;border:1px solid var(--line);border-radius:5px;background:var(--panel);color:var(--ink)}
+.controls input[type=range]{width:100%;accent-color:var(--blue)}
+.btnrow{display:flex;gap:8px;flex-wrap:wrap;grid-column:1/-1}
+button{font:inherit;font-weight:500;padding:7px 14px;border-radius:6px;border:1px solid var(--line);background:var(--panel);color:var(--ink);cursor:pointer}
+button:hover{border-color:var(--slate)}
+button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+button.primary{background:var(--blue);border-color:var(--blue);color:#fff}
+button.warn{color:var(--red);border-color:var(--red)}
+button.warn.on{background:var(--red);color:#fff}
+.chk{flex-direction:row!important;align-items:center;gap:8px!important;color:var(--ink)!important;font-size:14px!important}
+.stage{padding:8px}
+canvas{width:100%;height:auto;display:block;border-radius:6px;background:#EAEFEA}
+.legend{display:flex;flex-wrap:wrap;gap:6px 18px;padding:8px 6px 2px;color:var(--muted);font-size:12px}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;vertical-align:-1px}
+aside{display:flex;flex-direction:column;gap:10px;min-width:0}
+.metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--line);overflow:hidden}
+.metrics div{background:var(--panel);padding:9px 11px}
+.metrics span{display:block;font-size:11.5px;color:var(--muted)}
+.metrics b{font:500 19px var(--mono)}
+h2{font-size:13px;font-weight:600;margin:0;padding:10px 12px 6px}
+.feed{max-height:330px;overflow:auto;padding:0 8px 8px}
+.empty{padding:14px 12px;color:var(--muted)}
+.card{display:grid;grid-template-columns:84px 1fr;gap:10px;padding:8px;border:1px solid var(--line);border-radius:6px;margin-bottom:7px}
+.card img{width:84px;height:63px;border-radius:4px;object-fit:cover;display:block}
+.card .t{display:flex;justify-content:space-between;gap:6px;align-items:center}
+.card .m{font:12px var(--mono);color:var(--muted)}
+.sev{font-size:11px;padding:1px 7px;border-radius:10px;color:#fff;white-space:nowrap}
+.s3{background:var(--red)}.s2{background:var(--amber)}.s1{background:var(--slate)}
+.card button{padding:3px 9px;font-size:12px;margin-top:4px}
+.card.done{border-color:var(--green)}
+.log{height:210px;overflow:auto;padding:0 12px 10px;font:12px/1.5 var(--mono)}
+.log div{padding:1px 0}
+.log .t{color:var(--muted)}
+.log .ok{color:var(--green)}.log .bad{color:var(--red)}.log .info{color:var(--blue)}.log .warn{color:var(--amber)}
+.foot{display:flex;justify-content:space-between;align-items:center;padding-right:12px}
+@media (max-width:1050px){.wrap{grid-template-columns:1fr}}
+@media (prefers-reduced-motion: reduce){*{scroll-behavior:auto!important}}
+</style>
+</head>
+<body>
+<header>
+  <h1>Drone-Based Disaster Communication System</h1>
+  <p>Simulation of the pipeline: primary drone captures images and GPS in a no-network zone, relays the data through a backup drone to a communication tower, which forwards it to the main hub for NGOs and rescue teams. No hardware: everything below is modelled in software.</p>
+</header>
+
+<div class="wrap">
+  <section>
+    <div class="panel controls">
+      <label>Disaster scenario
+        <select id="scen">
+          <option value="flood">Flood</option>
+          <option value="earthquake">Earthquake</option>
+          <option value="landslide">Landslide</option>
+          <option value="fire">Forest fire</option>
+        </select>
+      </label>
+      <label>Relay behaviour
+        <select id="mode">
+          <option value="adaptive">Adaptive (follows primary drone)</option>
+          <option value="static">Static hover point</option>
+        </select>
+      </label>
+      <label>Simulation speed
+        <select id="speed">
+          <option value="1">1x</option><option value="2">2x</option>
+          <option value="4" selected>4x</option><option value="8">8x</option>
+        </select>
+      </label>
+      <label>Drone-to-drone range <b id="rangeV"></b>
+        <input type="range" id="range" min="120" max="500" step="10" value="300">
+      </label>
+      <label>Tower coverage radius <b id="towerV"></b>
+        <input type="range" id="towerR" min="100" max="300" step="10" value="200">
+      </label>
+      <label>Base packet loss <b id="lossV"></b>
+        <input type="range" id="loss" min="0" max="60" step="5" value="10">
+      </label>
+      <div class="btnrow">
+        <button class="primary" id="go">Start simulation</button>
+        <button id="reset">Reset</button>
+        <button id="seed">New random disaster</button>
+        <button class="warn" id="towerBtn">Take tower offline</button>
+        <button class="warn" id="failBtn">Fail relay drone</button>
+      </div>
+    </div>
+
+    <div class="panel stage">
+      <canvas id="c" width="1000" height="600" aria-label="Simulation map"></canvas>
+      <div class="legend">
+        <span><i style="background:var(--blue)"></i>Primary drone (survey)</span>
+        <span><i style="background:var(--amber)"></i>Relay drone</span>
+        <span><i style="background:var(--green)"></i>Tower coverage / active link</span>
+        <span><i style="background:var(--red)"></i>Critical finding</span>
+        <span><i style="background:#9AA9AE"></i>Not yet discovered</span>
+      </div>
+    </div>
+  </section>
+
+  <aside>
+    <div class="panel metrics">
+      <div><span>Captured</span><b id="mCap">0</b></div>
+      <div><span>Delivered to hub</span><b id="mDel">0</b></div>
+      <div><span>In transit</span><b id="mTr">0</b></div>
+      <div><span>Avg latency</span><b id="mLat">-</b></div>
+      <div><span>Retransmissions</span><b id="mRet">0</b></div>
+      <div><span>Lost</span><b id="mLost">0</b></div>
+      <div><span>Primary buffer</span><b id="mPB">0</b></div>
+      <div><span>Relay buffer</span><b id="mRB">0</b></div>
+      <div><span>Sim time</span><b id="mT">00:00</b></div>
+    </div>
+
+    <div class="panel">
+      <div class="foot"><h2>Main hub: reports for NGOs and rescue teams</h2><button id="csv" style="padding:3px 9px;font-size:12px">Export CSV</button></div>
+      <div class="feed" id="feed"><div class="empty">No reports yet. Press Start to launch the primary drone.</div></div>
+    </div>
+
+    <div class="panel">
+      <h2>Event log</h2>
+      <div class="log" id="log"></div>
+    </div>
+  </aside>
+</div>
+
+<script>
+/* =========================================================================
+   DRONE-BASED DISASTER COMMUNICATION SYSTEM - SOFTWARE SIMULATION
+   Pipeline:  Primary drone -> Relay drone -> Communication tower -> Main hub -> NGO
+   Techniques modelled:
+     - Store-and-forward buffering at each node (data waits until a link exists)
+     - Range-limited links, distance-dependent packet loss, ARQ retransmission
+     - Priority queue (critical findings are sent first)
+     - Adaptive relay positioning, battery swap with backup drone, failure handling
+   World units: 1 unit = 5 m.  GPS is derived from a fictional reference origin.
+   ========================================================================= */
+
+const $ = id => document.getElementById(id);
+const cv = $('c'), ctx = cv.getContext('2d');
+
+/* ---------- World layout ---------- */
+const W = 1000, H = 600, M_PER_UNIT = 5;
+const ZONE  = { x: 30, y: 50, w: 360, h: 480 };   // disaster area (no network)
+const BASE  = { x: 70, y: 572 };                  // launch / charging point
+const TOWER = { x: 720, y: 300 };                 // surviving communication tower
+const HUB   = { x: 925, y: 300 };                 // main hub (wired to tower)
+const LAT0 = 13.3700, LON0 = 77.0900;             // reference origin (top-left)
+
+/* ---------- Model constants ---------- */
+const CAM_R = 55;                // camera footprint radius
+const P_SPEED = 45, R_SPEED = 60, B_SPEED = 90;
+const P_DRAIN = 1.6, R_DRAIN = 0.2;   // battery % per sim second
+const BW_D2D = 150, BW_TOWER = 250;   // KB per sim second
+const BACKHAUL_DELAY = 1.2;           // tower -> hub (wired) seconds
+
+/* ---------- Scenarios ---------- */
+const SCEN = {
+  flood:      { pal: ['#2b6f9e', '#3d86b8', '#1f5a85'], zone: '40,120,200',
+                types: [['Stranded people', 3], ['Submerged house', 2], ['Washed-out road', 1], ['Rising water level', 2]] },
+  earthquake: { pal: ['#8d8579', '#a39a8c', '#6f685e'], zone: '150,110,60',
+                types: [['Trapped person', 3], ['Collapsed building', 3], ['Blocked road', 1], ['Damaged bridge', 2]] },
+  landslide:  { pal: ['#7a6a4f', '#8c7a5a', '#5f523d'], zone: '120,90,50',
+                types: [['Survivors on slope', 3], ['Buried house', 3], ['Blocked highway', 2], ['Stranded vehicle', 2]] },
+  fire:       { pal: ['#4b4034', '#5d4a37', '#2f2820'], zone: '210,80,30',
+                types: [['Trapped campers', 3], ['Burnt structure', 1], ['Smoke-blocked road', 2], ['Active fire front', 3]] }
+};
+const SEV_LABEL = { 3: 'Critical', 2: 'High', 1: 'Moderate' };
+const SEV_COL   = { 3: '#C4381F', 2: '#D9820B', 1: '#51636B' };
+
+/* ---------- Helpers ---------- */
+const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
+function mulberry32(a){ return function(){ a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a);
+  t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; } }
+function geo(x, y){
+  return { lat: LAT0 - (y * M_PER_UNIT) / 111000,
+           lon: LON0 + (x * M_PER_UNIT) / (111000 * Math.cos(LAT0 * Math.PI / 180)) };
+}
+const fmtT = s => String(Math.floor(s / 60)).padStart(2, '0') + ':' + String(Math.floor(s % 60)).padStart(2, '0');
+function moveToward(o, t, speed, dt){
+  const d = dist(o, t); if (d < 0.5) return true;
+  const k = Math.min(1, speed * dt / d); o.x += (t.x - o.x) * k; o.y += (t.y - o.y) * k; return d < 2;
+}
+
+/* ---------- Settings (read from UI) ---------- */
+const CFG = { range: 300, towerR: 200, loss: 0.1, mode: 'adaptive', speed: 4 };
+function readCfg(){
+  CFG.range = +$('range').value; CFG.towerR = +$('towerR').value; CFG.loss = +$('loss').value / 100;
+  CFG.mode = $('mode').value; CFG.speed = +$('speed').value;
+  $('rangeV').textContent  = (CFG.range  * M_PER_UNIT / 1000).toFixed(2) + ' km';
+  $('towerV').textContent  = (CFG.towerR * M_PER_UNIT / 1000).toFixed(2) + ' km';
+  $('lossV').textContent   = Math.round(CFG.loss * 100) + '%';
+}
+
+/* ---------- Simulation state ---------- */
+let S = null, seed = 20261011, running = false;
+
+function buildPath(){
+  const pts = [], l = ZONE.x + 30, r = ZONE.x + ZONE.w - 30;
+  for (let i = 0; i < 6; i++){
+    const y = 90 + i * 80;
+    if (i % 2 === 0) pts.push({ x: l, y }, { x: r, y }); else pts.push({ x: r, y }, { x: l, y });
+  }
+  return pts;
+}
+
+function genPOIs(scen){
+  const rnd = mulberry32(seed), arr = []; let tries = 0;
+  while (arr.length < 14 && tries++ < 800){
+    const x = ZONE.x + 25 + rnd() * (ZONE.w - 50), y = ZONE.y + 25 + rnd() * (ZONE.h - 50);
+    if (arr.some(p => Math.hypot(p.x - x, p.y - y) < 45)) continue;
+    const ti = Math.floor(rnd() * 4), [name, sev] = SCEN[scen].types[ti];
+    arr.push({ id: arr.length + 1, x, y, ti, name, sev, found: false });
+  }
+  return arr;
+}
+
+function resetSim(){
+  const scen = $('scen').value;
+  S = {
+    scen, t: 0, pois: genPOIs(scen), path: buildPath(), pktN: 0, rnd: mulberry32(seed + 7),
+    P: { x: BASE.x, y: BASE.y, batt: 100, state: 'survey', wi: 0, buf: [], tx: null, timer: 0, finished: false },
+    R: { x: TOWER.x - 170, y: TOWER.y, batt: 100, buf: [], tx: null },
+    B: null,
+    tower: { up: true },
+    backhaul: [], delivered: [],
+    stats: { captured: 0, delivered: 0, lost: 0, retx: 0, latSum: 0 },
+    allDoneLogged: false
+  };
+  $('feed').innerHTML = '<div class="empty">No reports yet. Press Start to launch the primary drone.</div>';
+  $('log').innerHTML = '';
+  $('towerBtn').classList.remove('on'); $('towerBtn').textContent = 'Take tower offline';
+  log('Simulation ready. ' + S.pois.length + ' hidden findings in the ' + SCEN[scen].types.length + '-type ' + scen + ' scenario.', 'info');
+  updateUI();
+}
+
+/* ---------- Logging ---------- */
+function log(msg, cls){
+  const el = $('log'), d = document.createElement('div');
+  d.innerHTML = '<span class="t">[' + fmtT(S ? S.t : 0) + ']</span> <span class="' + (cls || '') + '">' + msg + '</span>';
+  el.appendChild(d); el.scrollTop = el.scrollHeight;
+  while (el.children.length > 120) el.removeChild(el.firstChild);
+}
+
+/* ---------- Simulated camera imagery ---------- */
+function makeThumb(poi, scen, lat, lon){
+  const c = document.createElement('canvas'); c.width = 112; c.height = 84; const g = c.getContext('2d');
+  const rnd = mulberry32(poi.id * 977 + seed), pal = SCEN[scen].pal;
+  g.fillStyle = pal[0]; g.fillRect(0, 0, 112, 84);
+  g.globalAlpha = .5;
+  for (let i = 0; i < 16; i++){ g.fillStyle = pal[1 + (i % 2)]; g.fillRect(rnd() * 112, rnd() * 84, 10 + rnd() * 30, 6 + rnd() * 14); }
+  g.globalAlpha = 1;
+  const t = poi.ti;
+  if (t === 0){            // people
+    for (let i = 0; i < 3; i++){ const x = 30 + i * 26 + rnd() * 8, y = 42 + rnd() * 10;
+      g.fillStyle = '#f2c14e'; g.beginPath(); g.arc(x, y - 10, 5, 0, 7); g.fill();
+      g.fillStyle = '#d9534f'; g.fillRect(x - 4, y - 5, 8, 14); }
+  } else if (t === 1){     // building
+    g.fillStyle = '#8a8f98'; g.fillRect(24, 32, 64, 38);
+    g.fillStyle = '#5b616b'; g.beginPath(); g.moveTo(18, 32); g.lineTo(56, 10); g.lineTo(94, 32); g.fill();
+    g.fillStyle = '#2c3138'; g.fillRect(34, 44, 12, 12); g.fillRect(62, 44, 12, 12);
+  } else if (t === 2){     // road with blockage
+    g.fillStyle = '#464b53'; g.fillRect(0, 34, 112, 22);
+    g.fillStyle = '#e8e8e8'; for (let x = 4; x < 112; x += 20) g.fillRect(x, 44, 10, 2);
+    g.fillStyle = '#6b5a45'; for (let i = 0; i < 6; i++){ g.beginPath(); g.arc(46 + rnd() * 26, 40 + rnd() * 12, 5 + rnd() * 5, 0, 7); g.fill(); }
+  } else {                 // hazard
+    if (scen === 'fire'){ for (let i = 0; i < 6; i++){ const x = 14 + i * 16 + rnd() * 6;
+      g.fillStyle = i % 2 ? '#ff8a1f' : '#e03a1a'; g.beginPath(); g.moveTo(x - 9, 74); g.lineTo(x, 28 + rnd() * 14); g.lineTo(x + 9, 74); g.fill(); } }
+    else if (scen === 'flood'){ g.strokeStyle = '#bfe2f5'; g.lineWidth = 2; for (let y = 20; y < 74; y += 11){ g.beginPath(); for (let x = 0; x <= 112; x += 8) g.lineTo(x, y + Math.sin(x / 9 + y) * 3); g.stroke(); } }
+    else { g.strokeStyle = '#2a2a2a'; g.lineWidth = 2; for (let i = 0; i < 4; i++){ g.beginPath(); g.moveTo(rnd() * 112, 10); g.lineTo(rnd() * 112, 74); g.stroke(); } }
+  }
+  g.fillStyle = 'rgba(0,0,0,.6)'; g.fillRect(0, 72, 112, 12);
+  g.fillStyle = '#fff'; g.font = '8px monospace'; g.fillText(lat.toFixed(4) + ', ' + lon.toFixed(4), 3, 81);
+  return c.toDataURL('image/jpeg', .7);
+}
+
+/* ---------- Primary drone: survey, capture, return to base ---------- */
+function updatePrimary(dt){
+  const P = S.P;
+  if (P.state === 'survey'){
+    const wp = S.path[P.wi];
+    if (moveToward(P, wp, P_SPEED, dt)){ P.wi++; if (P.wi >= S.path.length){ P.finished = true; P.state = 'offload'; log('Survey path complete. Primary drone flying to relay to offload ' + P.buf.length + ' buffered packet(s).', 'info'); } }
+    P.batt -= P_DRAIN * dt;
+    if (P.batt < 22 && P.state === 'survey'){ P.state = 'rtl'; log('Primary drone battery low (' + Math.round(P.batt) + '%). Returning to base to recharge.', 'warn'); }
+  } else if (P.state === 'offload'){
+    // Fly toward the relay until in range, hover until every packet has been handed over
+    P.batt = Math.max(5, P.batt - P_DRAIN * 0.3 * dt);
+    if (S.R && dist(P, S.R) > CFG.range * 0.6) moveToward(P, S.R, P_SPEED, dt);
+    if (!P.buf.length && !P.tx){ P.state = 'rtl'; log('All data handed to relay. Primary drone returning to base.', 'info'); }
+  } else if (P.state === 'rtl'){
+    P.batt -= P_DRAIN * dt * .6;
+    if (moveToward(P, BASE, P_SPEED * 1.3, dt)){ P.state = 'charge'; P.timer = 6; }
+  } else if (P.state === 'charge'){
+    P.timer -= dt; P.batt = Math.min(100, P.batt + 14 * dt);
+    if (P.timer <= 0){ P.batt = 100; if (P.finished){ P.state = 'done'; log('Primary drone landed. Mission complete.', 'info'); } else { P.state = 'survey'; log('Recharged. Primary drone resuming survey.', 'info'); } }
+  }
+  if (P.state === 'survey' || P.state === 'rtl') captureNearby();
+}
+
+function captureNearby(){
+  for (const poi of S.pois){
+    if (poi.found || dist(S.P, poi) > CAM_R) continue;
+    poi.found = true;
+    const g = geo(poi.x, poi.y), id = 'PKT-' + String(++S.pktN).padStart(3, '0');
+    const pk = { id, name: poi.name, sev: poi.sev, lat: g.lat, lon: g.lon, size: 180 + Math.round(S.rnd() * 240) + poi.sev * 30,
+                 tCap: S.t, retries: 0, status: 'primary', thumb: makeThumb(poi, S.scen, g.lat, g.lon), path: ['Primary'] };
+    S.P.buf.push(pk); S.stats.captured++;
+    log('Captured ' + id + ': ' + poi.name + ' @ ' + g.lat.toFixed(4) + ', ' + g.lon.toFixed(4) + ' [' + SEV_LABEL[poi.sev] + ', ' + pk.size + ' KB]', poi.sev === 3 ? 'bad' : '');
+  }
+}
+
+/* ---------- Relay drone logic ---------- */
+function relayTarget(){
+  if (CFG.mode === 'static') return { x: TOWER.x - 0.85 * CFG.towerR, y: TOWER.y };
+  // Adaptive: sit on the line tower -> primary, as far toward the primary as the tower link allows
+  const vx = S.P.x - TOWER.x, vy = S.P.y - TOWER.y, d = Math.hypot(vx, vy) || 1;
+  const want = Math.max(0, d - CFG.range * 0.85), lim = CFG.towerR * 0.92, k = Math.min(want, lim);
+  return { x: TOWER.x + vx / d * k, y: TOWER.y + vy / d * k };
+}
+function launchBackup(reason){
+  S.B = { x: TOWER.x, y: TOWER.y, batt: 100, buf: [], tx: null };
+  log('Backup drone launched from tower (' + reason + ').', 'warn');
+}
+function failRelay(){
+  if (!S.R){ return; }
+  const n = S.R.buf.length;
+  S.R.buf.forEach(p => p.status = 'lost'); S.stats.lost += n;
+  log('Relay drone FAILED. ' + n + ' buffered packet(s) lost.', 'bad');
+  S.R = null; if (!S.B) launchBackup('relay failure');
+}
+function updateRelays(dt){
+  const tgt = relayTarget();
+  if (S.R){
+    moveToward(S.R, tgt, R_SPEED, dt); S.R.batt -= R_DRAIN * dt;
+    if (S.R.batt < 25 && !S.B) launchBackup('relay battery ' + Math.round(S.R.batt) + '%');
+  }
+  if (S.B){
+    const dest = S.R ? { x: S.R.x, y: S.R.y } : tgt;
+    moveToward(S.B, dest, B_SPEED, dt);
+    if (dist(S.B, dest) < 14){
+      if (S.R){ S.B.buf = S.R.buf.concat(S.B.buf); log('Handoff complete: backup drone took over ' + S.B.buf.length + ' buffered packet(s).', 'ok'); }
+      else log('Backup drone is now the active relay.', 'ok');
+      S.R = S.B; S.B = null;
+    }
+  }
+}
+
+/* ---------- Generic link: priority queue + ARQ ---------- */
+function lossFor(ratio){ return Math.min(.95, CFG.loss + 0.30 * ratio * ratio); }
+function runLink(node, up, bw, ratio, onDeliver, name){
+  if (!node) return;
+  if (node.tx){
+    if (!up){ log(name + ' link dropped during transfer of ' + node.tx.pk.id + '. Will resend when link returns.', 'warn'); node.tx = null; }
+    else {
+      node.tx.p += S.dtStep;
+      if (node.tx.p >= node.tx.dur){
+        const pk = node.tx.pk; node.tx = null;
+        if (S.rnd() > lossFor(ratio)){ node.buf.splice(node.buf.indexOf(pk), 1); onDeliver(pk); }
+        else { pk.retries++; S.stats.retx++; log(name + ' packet ' + pk.id + ' lost in transit. Retransmitting (attempt ' + (pk.retries + 1) + ').', 'warn'); }
+      }
+    }
+  }
+  if (!node.tx && up && node.buf.length){
+    let best = node.buf[0];
+    for (const p of node.buf) if (p.sev > best.sev || (p.sev === best.sev && p.tCap < best.tCap)) best = p;
+    node.tx = { pk: best, p: 0, dur: best.size / bw };
+  }
+}
+
+function hubReceive(pk){
+  pk.tHub = S.t; pk.status = 'hub'; pk.path.push('Hub');
+  S.stats.delivered++; S.stats.latSum += pk.tHub - pk.tCap; S.delivered.unshift(pk);
+  log('HUB received ' + pk.id + ' (' + pk.name + ') after ' + (pk.tHub - pk.tCap).toFixed(1) + ' s.', 'ok');
+  addCard(pk);
+}
+
+function stepSim(dt){
+  S.dtStep = dt; S.t += dt;
+  updatePrimary(dt); updateRelays(dt);
+
+  const dPR = S.R ? dist(S.P, S.R) : Infinity;
+  S.linkPR = !!S.R && dPR <= CFG.range;
+  runLink(S.P, S.linkPR, BW_D2D, dPR / CFG.range, pk => { pk.status = 'relay'; pk.path.push('Relay'); S.R.buf.push(pk); }, 'Primary->Relay');
+
+  const dRT = S.R ? dist(S.R, TOWER) : Infinity;
+  S.linkRT = !!S.R && S.tower.up && dRT <= CFG.towerR;
+  if (S.R) runLink(S.R, S.linkRT, BW_TOWER, dRT / CFG.towerR, pk => { pk.status = 'tower'; pk.path.push('Tower'); S.backhaul.push({ pk, t: 0 }); }, 'Relay->Tower');
+
+  for (let i = S.backhaul.length - 1; i >= 0; i--){
+    const b = S.backhaul[i]; b.t += dt;
+    if (b.t >= BACKHAUL_DELAY){ S.backhaul.splice(i, 1); hubReceive(b.pk); }
+  }
+
+  if (!S.allDoneLogged && S.P.state === 'done' && S.stats.captured > 0 && S.stats.delivered + S.stats.lost === S.stats.captured){
+    S.allDoneLogged = true;
+    log('All reports accounted for: ' + S.stats.delivered + ' delivered, ' + S.stats.lost + ' lost. Avg latency ' + (S.stats.latSum / Math.max(1, S.stats.delivered)).toFixed(1) + ' s.', 'ok');
+  }
+}
+
+/* ---------- Dashboard ---------- */
+function addCard(pk){
+  const feed = $('feed'); if (feed.querySelector('.empty')) feed.innerHTML = '';
+  const d = document.createElement('div'); d.className = 'card'; d.dataset.id = pk.id;
+  d.innerHTML = '<img alt="Simulated drone image" src="' + pk.thumb + '"><div>' +
+    '<div class="t"><b>' + pk.name + '</b><span class="sev s' + pk.sev + '">' + SEV_LABEL[pk.sev] + '</span></div>' +
+    '<div class="m">' + pk.lat.toFixed(5) + ', ' + pk.lon.toFixed(5) + '</div>' +
+    '<div class="m">' + pk.id + ' | ' + (pk.tHub - pk.tCap).toFixed(1) + ' s | retries ' + pk.retries + '</div>' +
+    '<button class="dispatch">Dispatch team</button></div>';
+  feed.insertBefore(d, feed.firstChild);
+}
+$('feed').addEventListener('click', e => {
+  if (!e.target.classList.contains('dispatch')) return;
+  const card = e.target.closest('.card'); card.classList.add('done');
+  e.target.textContent = 'Team dispatched'; e.target.disabled = true;
+  log('NGO dispatched a rescue team for ' + card.dataset.id + '.', 'info');
+});
+function updateUI(){
+  const st = S.stats, inflight = st.captured - st.delivered - st.lost;
+  $('mCap').textContent = st.captured; $('mDel').textContent = st.delivered; $('mTr').textContent = inflight;
+  $('mLat').textContent = st.delivered ? (st.latSum / st.delivered).toFixed(1) + ' s' : '-';
+  $('mRet').textContent = st.retx; $('mLost').textContent = st.lost;
+  $('mPB').textContent = S.P.buf.length; $('mRB').textContent = S.R ? S.R.buf.length : 0; $('mT').textContent = fmtT(S.t);
+}
+$('csv').onclick = () => {
+  const rows = [['id', 'finding', 'severity', 'lat', 'lon', 'captured_s', 'received_s', 'latency_s', 'retries', 'path']];
+  S.delivered.slice().reverse().forEach(p => rows.push([p.id, p.name, SEV_LABEL[p.sev], p.lat.toFixed(5), p.lon.toFixed(5), p.tCap.toFixed(1), p.tHub.toFixed(1), (p.tHub - p.tCap).toFixed(1), p.retries, p.path.join('>')]));
+  const blob = new Blob([rows.map(r => r.join(',')).join('\n')], { type: 'text/csv' });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'hub_reports.csv'; a.click();
+};
+
+/* ---------- Rendering ---------- */
+function css(v){ return getComputedStyle(document.documentElement).getPropertyValue(v).trim(); }
+function drawDrone(d, color, label, ghost){
+  ctx.save(); ctx.translate(d.x, d.y); ctx.globalAlpha = ghost ? .75 : 1;
+  const a = S.t * 18;
+  ctx.strokeStyle = color; ctx.lineWidth = 2;
+  for (const [ox, oy] of [[-10, -10], [10, -10], [-10, 10], [10, 10]]){
+    ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(ox, oy); ctx.stroke();
+    ctx.fillStyle = color + '55'; ctx.beginPath(); ctx.arc(ox, oy, 6, 0, 7); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(ox + Math.cos(a) * 6, oy + Math.sin(a) * 6); ctx.lineTo(ox - Math.cos(a) * 6, oy - Math.sin(a) * 6); ctx.stroke();
+  }
+  ctx.fillStyle = color; ctx.beginPath(); ctx.arc(0, 0, 6, 0, 7); ctx.fill();
+  ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(0, 0, 2, 0, 7); ctx.fill();
+  // battery bar
+  ctx.fillStyle = '#0003'; ctx.fillRect(-14, -24, 28, 4);
+  ctx.fillStyle = d.batt > 40 ? '#1E8F5A' : d.batt > 22 ? '#D9820B' : '#C4381F'; ctx.fillRect(-14, -24, 28 * Math.max(0, d.batt) / 100, 4);
+  ctx.fillStyle = css('--ink'); ctx.font = '500 11px IBM Plex Sans, sans-serif'; ctx.textAlign = 'center';
+  ctx.fillText(label + (d.buf && d.buf.length ? '  [' + d.buf.length + ']' : ''), 0, 26);
+  ctx.restore();
+}
+function drawLink(a, b, color){
+  ctx.save(); ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.setLineDash([6, 5]); ctx.lineDashOffset = -S.t * 40;
+  ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke(); ctx.restore();
+}
+function drawPacket(node, dest){
+  if (!node || !node.tx) return;
+  const f = Math.min(1, node.tx.p / node.tx.dur), x = node.x + (dest.x - node.x) * f, y = node.y + (dest.y - node.y) * f;
+  ctx.fillStyle = SEV_COL[node.tx.pk.sev]; ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.rect(x - 5, y - 4, 10, 8); ctx.fill(); ctx.stroke();
+}
+
+function render(){
+  ctx.clearRect(0, 0, W, H);
+  ctx.fillStyle = css('--bg') === '#10181B' ? '#1B2629' : '#EAEFEA'; ctx.fillRect(0, 0, W, H);
+  // faint map grid
+  ctx.strokeStyle = 'rgba(80,100,100,.12)'; ctx.lineWidth = 1;
+  for (let x = 0; x <= W; x += 50){ ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke(); }
+  for (let y = 0; y <= H; y += 50){ ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
+
+  // disaster zone
+  ctx.fillStyle = 'rgba(' + SCEN[S.scen].zone + ',.20)'; ctx.fillRect(ZONE.x, ZONE.y, ZONE.w, ZONE.h);
+  ctx.save(); ctx.strokeStyle = '#C4381F'; ctx.setLineDash([8, 6]); ctx.lineWidth = 2; ctx.strokeRect(ZONE.x, ZONE.y, ZONE.w, ZONE.h); ctx.restore();
+  ctx.fillStyle = '#C4381F'; ctx.font = '600 12px IBM Plex Sans, sans-serif'; ctx.textAlign = 'left';
+  ctx.fillText('Disaster zone - mobile network down', ZONE.x + 8, ZONE.y - 8);
+
+  // planned survey path
+  ctx.save(); ctx.strokeStyle = 'rgba(31,95,191,.28)'; ctx.setLineDash([3, 6]); ctx.beginPath();
+  S.path.forEach((p, i) => i ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y)); ctx.stroke(); ctx.restore();
+
+  // tower coverage
+  ctx.fillStyle = 'rgba(30,143,90,.10)'; ctx.strokeStyle = S.tower.up ? 'rgba(30,143,90,.8)' : 'rgba(196,56,31,.8)';
+  ctx.setLineDash([6, 5]); ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(TOWER.x, TOWER.y, CFG.towerR, 0, 7); ctx.fill(); ctx.stroke(); ctx.setLineDash([]);
+
+  // wired backhaul + hub
+  ctx.strokeStyle = css('--slate'); ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(TOWER.x, TOWER.y); ctx.lineTo(HUB.x - 18, HUB.y); ctx.stroke();
+  S.backhaul.forEach(b => { const f = b.t / BACKHAUL_DELAY; ctx.fillStyle = SEV_COL[b.pk.sev];
+    ctx.fillRect(TOWER.x + (HUB.x - 18 - TOWER.x) * f - 5, TOWER.y - 4, 10, 8); });
+  // tower icon
+  ctx.fillStyle = S.tower.up ? '#1E8F5A' : '#C4381F';
+  ctx.beginPath(); ctx.moveTo(TOWER.x, TOWER.y - 22); ctx.lineTo(TOWER.x - 11, TOWER.y + 14); ctx.lineTo(TOWER.x + 11, TOWER.y + 14); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = css('--ink'); ctx.font = '500 11px IBM Plex Sans, sans-serif'; ctx.textAlign = 'center';
+  ctx.fillText(S.tower.up ? 'Comm. tower' : 'Tower OFFLINE', TOWER.x, TOWER.y + 30);
+  // hub icon
+  ctx.fillStyle = css('--ink'); ctx.fillRect(HUB.x - 18, HUB.y - 24, 36, 48);
+  ctx.fillStyle = '#EAEFEA'; for (let r = 0; r < 4; r++) for (let c = 0; c < 2; c++) ctx.fillRect(HUB.x - 11 + c * 13, HUB.y - 18 + r * 11, 7, 6);
+  ctx.fillStyle = css('--ink'); ctx.fillText('Main hub', HUB.x, HUB.y + 40); ctx.fillText('NGO / rescue', HUB.x, HUB.y + 53);
+
+  // base
+  ctx.strokeStyle = css('--slate'); ctx.lineWidth = 2; ctx.strokeRect(BASE.x - 12, BASE.y - 12, 24, 24);
+  ctx.fillStyle = css('--slate'); ctx.font = '600 12px IBM Plex Sans'; ctx.fillText('H', BASE.x, BASE.y + 4);
+  ctx.font = '500 11px IBM Plex Sans'; ctx.fillText('Launch base', BASE.x + 52, BASE.y + 4);
+
+  // findings
+  for (const p of S.pois){
+    if (!p.found){ ctx.fillStyle = '#9AA9AE'; ctx.beginPath(); ctx.arc(p.x, p.y, 3.5, 0, 7); ctx.fill(); }
+    else { ctx.fillStyle = SEV_COL[p.sev]; ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(p.x, p.y, 7, 0, 7); ctx.fill(); ctx.stroke(); }
+  }
+
+  // relay range
+  if (S.R){ ctx.save(); ctx.strokeStyle = 'rgba(217,130,11,.55)'; ctx.setLineDash([4, 6]); ctx.beginPath(); ctx.arc(S.R.x, S.R.y, CFG.range, 0, 7); ctx.stroke(); ctx.restore(); }
+  // camera footprint
+  ctx.fillStyle = 'rgba(31,95,191,.10)'; ctx.beginPath(); ctx.arc(S.P.x, S.P.y, CAM_R, 0, 7); ctx.fill();
+
+  // links
+  if (S.R && S.linkPR) drawLink(S.P, S.R, '#1E8F5A');
+  if (S.R && S.linkRT) drawLink(S.R, TOWER, '#1E8F5A');
+  drawPacket(S.P, S.R || S.P); drawPacket(S.R, TOWER);
+
+  // drones
+  if (S.B) drawDrone(S.B, '#D9820B', 'Backup', true);
+  if (S.R) drawDrone(S.R, '#D9820B', 'Relay');
+  drawDrone(S.P, '#1F5FBF', 'Primary');
+  if (S.P.state === 'charge'){ ctx.fillStyle = '#1E8F5A'; ctx.textAlign = 'center'; ctx.fillText('charging', S.P.x, S.P.y + 40); }
+  if (!S.R){ ctx.fillStyle = '#C4381F'; ctx.font = '600 12px IBM Plex Sans'; ctx.textAlign = 'center'; ctx.fillText('NO ACTIVE RELAY - primary is buffering', 500, 28); }
+}
+
+/* ---------- Main loop ---------- */
+let last = performance.now();
+function frame(now){
+  const real = Math.min(0.05, (now - last) / 1000); last = now;
+  if (running){
+    let sim = real * CFG.speed; while (sim > 0){ const dt = Math.min(0.05, sim); stepSim(dt); sim -= dt; }
+    updateUI();
+  }
+  render(); requestAnimationFrame(frame);
+}
+
+/* ---------- Controls ---------- */
+['range', 'towerR', 'loss', 'mode', 'speed'].forEach(id => $(id).addEventListener('input', readCfg));
+$('scen').addEventListener('change', () => { running = false; $('go').textContent = 'Start simulation'; resetSim(); });
+$('go').onclick = () => { running = !running; $('go').textContent = running ? 'Pause' : (S.t > 0 ? 'Resume' : 'Start simulation'); if (running && S.t === 0) log('Primary drone launched from base.', 'info'); };
+$('reset').onclick = () => { running = false; $('go').textContent = 'Start simulation'; resetSim(); };
+$('seed').onclick = () => { seed = Math.floor(Math.random() * 1e6); running = false; $('go').textContent = 'Start simulation'; resetSim(); };
+$('towerBtn').onclick = () => {
+  S.tower.up = !S.tower.up;
+  $('towerBtn').classList.toggle('on', !S.tower.up);
+  $('towerBtn').textContent = S.tower.up ? 'Take tower offline' : 'Bring tower back online';
+  log(S.tower.up ? 'Communication tower back online. Relay will flush its buffer.' : 'Communication tower OFFLINE. Relay will store packets until it returns.', S.tower.up ? 'ok' : 'bad');
+};
+$('failBtn').onclick = failRelay;
+
+readCfg(); resetSim(); requestAnimationFrame(frame);
+</script>
+</body>
+</html>

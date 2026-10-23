@@ -1,0 +1,7 @@
+flow_id,src,dst,tx_packets,rx_packets,lost_packets,tx_bytes,rx_bytes,mean_delay_ms,throughput_kbps
+1,Primary,Relay,23,22,2,390644,372616,75.338,13.303
+2,Relay,Tower,20,19,2,334560,316532,74.314,11.506
+3,Relay,Primary,14,14,0,1064,1064,62.503,0.039
+4,Tower,Hub,14,14,0,232392,232392,6.347,8.505
+5,Tower,Relay,14,14,0,1064,1064,1.256,0.039
+6,Hub,Tower,14,14,0,1064,1064,5.006,0.039

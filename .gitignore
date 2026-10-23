@@ -1,0 +1,14 @@
+# build output
+ns3/drone_disaster_sim
+ns3/output/
+
+# generated results (re-create with run_experiments.sh)
+ns3_output/
+
+# python
+.venv/
+__pycache__/
+*.pyc
+
+# local database
+backend/disaster.db

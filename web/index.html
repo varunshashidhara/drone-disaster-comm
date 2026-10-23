@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Disaster Relief Coordination Desk</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css">
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+<header class="top">
+  <div>
+    <h1>Relief Coordination Desk</h1>
+    <p class="sub">Reports relayed by drone from disaster zones with no mobile network</p>
+  </div>
+  <label class="runpick">Simulation run
+    <select id="runSelect" aria-label="Choose simulation run"></select>
+  </label>
+</header>
+
+<main id="app" hidden>
+
+  <details class="panel runner" id="runner" open>
+    <summary>Run a new simulation <span class="hint">(starts NS-3 on this computer and shows the result below)</span></summary>
+    <form id="runForm" class="runform" autocomplete="off">
+      <label>Disaster scenario
+        <select id="rScen"><option value="flood">Flood</option><option value="earthquake">Earthquake</option>
+          <option value="landslide">Landslide</option><option value="fire">Forest fire</option></select></label>
+      <label>Relay drone behaviour
+        <select id="rMode"><option value="adaptive">Adaptive (follows primary)</option><option value="static">Static hover point</option></select></label>
+      <label>Drone-to-drone range <b id="rRangeV"></b><input type="range" id="rRange" min="100" max="800" step="10" value="450"></label>
+      <label>Tower coverage radius <b id="rTowerV"></b><input type="range" id="rTower" min="100" max="800" step="10" value="600"></label>
+      <label>Packet loss <b id="rLossV"></b><input type="range" id="rLoss" min="0" max="60" step="5" value="10"></label>
+      <label>Tower offline from (s)<input type="number" id="rDown1" min="0" max="900" placeholder="never"></label>
+      <label>Tower back online at (s)<input type="number" id="rDown2" min="0" max="900" placeholder="never"></label>
+      <label>Random seed<input type="number" id="rSeed" min="1" max="999999" value="1"></label>
+      <label>Run name<input type="text" id="rName" maxlength="40" placeholder="auto"></label>
+      <div class="runact"><button class="act" id="rGo" type="submit">Run simulation</button><span class="hint" id="rMsg" role="status"></span></div>
+    </form>
+  </details>
+
+  <section class="strip" aria-label="Run summary">
+    <div class="stat"><span>Reports received</span><b id="sDelivered">0</b><small id="sRatio"></small></div>
+    <div class="stat"><span>Average delay</span><b id="sAvg">-</b><small id="sRange"></small></div>
+    <div class="stat"><span>Slowest report</span><b id="sMax">-</b><small>capture to hub</small></div>
+    <div class="stat"><span>Retransmissions</span><b id="sRetx">0</b><small>extra sends after loss</small></div>
+    <div class="stat"><span>Teams dispatched</span><b id="sDisp">0</b><small id="sResolved"></small></div>
+    <div class="params" id="params"></div>
+  </section>
+
+  <section class="panel replay" id="replay">
+    <div class="phead"><h2>Live replay of this simulation</h2><span class="hint" id="rpNote">Drone positions, links and packets come from the NS-3 run</span></div>
+    <canvas id="rpCanvas" role="img" aria-label="Replay of the drone simulation"></canvas>
+    <div class="rpbar">
+      <button class="act" id="rpPlay" type="button">Play</button>
+      <button class="act ghost" id="rpRestart" type="button">Restart</button>
+      <label class="spd">Speed
+        <select id="rpSpeed"><option value="1">1x</option><option value="5">5x</option><option value="10" selected>10x</option><option value="25">25x</option><option value="50">50x</option></select></label>
+      <input type="range" id="rpScrub" min="0" max="100" step="0.1" value="0" aria-label="Replay time">
+      <span id="rpTime" class="mono">00:00 / 00:00</span>
+    </div>
+    <div class="rpstatus" id="rpStatus"></div>
+    <div class="rpinbox" id="rpInbox"></div>
+  </section>
+
+  <section class="duo">
+    <div class="panel mapwrap">
+      <div class="phead"><h2>Findings map</h2><span class="hint" id="mapNote"></span></div>
+      <div id="map" role="img" aria-label="Map of reported findings"></div>
+    </div>
+
+    <div class="panel queue">
+      <div class="phead">
+        <h2>Priority queue</h2>
+        <div class="filters">
+          <select id="fSev" aria-label="Filter by severity">
+            <option value="">All severities</option><option value="3">Critical</option>
+            <option value="2">High</option><option value="1">Moderate</option>
+          </select>
+          <select id="fStatus" aria-label="Filter by status">
+            <option value="">Any status</option><option value="new">New</option>
+            <option value="dispatched">Dispatched</option><option value="resolved">Resolved</option>
+          </select>
+        </div>
+      </div>
+      <div class="list" id="reportList"></div>
+    </div>
+  </section>
+
+  <section class="duo even">
+    <div class="panel">
+      <div class="phead"><h2>Delay per report</h2><span class="hint">seconds from capture to hub</span></div>
+      <div class="chartbox"><canvas id="chLatency"></canvas></div>
+      <div class="sevrow" id="sevRow"></div>
+    </div>
+    <div class="panel">
+      <div class="phead"><h2>Compare runs</h2><span class="hint">average delay, click a bar to open that run</span></div>
+      <div class="chartbox"><canvas id="chCompare"></canvas></div>
+    </div>
+  </section>
+
+  <section class="duo even">
+    <div class="panel">
+      <div class="phead"><h2>Network performance (FlowMonitor)</h2><span class="hint">lost packets were resent until acknowledged</span></div>
+      <div class="tablewrap">
+        <table id="flowTable">
+          <thead><tr><th>Link</th><th>Type</th><th class="n">Sent</th><th class="n">Received</th><th class="n">Lost</th><th class="n">Loss</th><th class="n">Mean delay</th><th class="n">Throughput</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="phead">
+        <h2>Event timeline</h2>
+        <label class="chk"><input type="checkbox" id="evAll"> include packet-level events</label>
+      </div>
+      <div class="events" id="events"></div>
+    </div>
+  </section>
+</main>
+
+<section id="empty" class="emptystate" hidden>
+  <h2>No simulation data yet</h2>
+  <p>Run the NS-3 simulation and import its output, then reload this page:</p>
+  <pre>cd backend
+python importer.py --all ../data/sample_runs --reset</pre>
+</section>
+
+<script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<script src="/static/replay.js"></script>
+<script src="/static/app.js"></script>
+</body>
+</html>

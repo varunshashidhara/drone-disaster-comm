@@ -1,0 +1,15 @@
+poi_id,x,y,finding,severity,found_s
+1,163.9,488.1,Collapsed building,3,219.00
+2,345.1,459.5,Blocked road,1,230.50
+3,80.5,482.0,Blocked road,1,15.50
+4,436.9,274.9,Damaged bridge,2,154.00
+5,492.5,490.7,Trapped person,3,241.50
+6,358.3,587.2,Damaged bridge,2,266.00
+7,354.6,306.4,Blocked road,1,150.50
+8,413.2,384.8,Collapsed building,3,179.00
+9,95.6,326.7,Collapsed building,3,26.50
+10,198.2,609.0,Trapped person,3,279.00
+11,456.1,171.2,Collapsed building,3,93.00
+12,62.8,51.4,Collapsed building,3,44.00
+13,379.1,109.0,Trapped person,3,70.00
+14,457.0,33.4,Blocked road,1,72.00

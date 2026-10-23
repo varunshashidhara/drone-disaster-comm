@@ -1,0 +1,17 @@
+{
+  "scenario": "flood",
+  "relay_mode": "static",
+  "drone_range_m": 450,
+  "tower_range_m": 600,
+  "loss_base": 0.1,
+  "image_bytes": 12000,
+  "seed": 1,
+  "tower_down_start": -1,
+  "tower_down_end": -1,
+  "captured": 14,
+  "delivered": 14,
+  "avg_latency_s": 0.958,
+  "peak_primary_queue": 1,
+  "peak_relay_queue": 1,
+  "sim_end_s": 361.000
+}
